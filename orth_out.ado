@@ -1,13 +1,13 @@
-*! version 2.3.1 Joe Long 18dec2013
+*! version 2.4.0 Joe Long 20dec2013
 cap program drop orth_out
 program orth_out, rclass
 	version 12
 	syntax varlist [using] [if], BY(varlist) [replace] ///
-		[SHEET(string) SHEETREPlace BDec(numlist) COMPare count]  ///
+		[SHEET(string) SHEETREPlace BDec(numlist) COMPare count vcount]  ///
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
-		[COLNUM Title(string) NOTEs(string) Ftest overall] ///
+		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
-		[INTERACTion Reverse append stars]	
+		[INTERACTion Reverse reverseall append stars]	
 		
 	preserve
 	if `"`if'"' != ""{
@@ -76,15 +76,17 @@ program orth_out, rclass
 	}
 	
 	loc count 	= 1 - mi("`count'")
-	loc ftest 	= 1 - mi("`ftest'")
+	loc ftest 	= 1 - mi("`test'")
 	loc overall	= 1 - mi("`overall'")
 	loc prop    = 1 - mi("`proportion'")
 	loc sterr	= 2 - mi("`semean'")
 	loc interact= 1 - mi("`interaction'")
 	loc reverse = 1 - mi("`reverse'")
+	loc reverseall = 1 - mi("`reverseall'")
+	loc vcount = 1 - mi("`vcount'")
 	
 	tempname A
-	mat `A' = J(`sterr'*`varcount'+`count'+`prop', `m'+`reverse'+`overall'+`ftest', .)
+	mat `A' = J(`sterr'*`varcount'+`count'+`prop', `m'+`reverse'+`reverseall'+`overall'+`test'+`vcount', .)
 	loc r 0
 	foreach var in `varlist' {
 		loc ++r
@@ -150,11 +152,44 @@ program orth_out, rclass
 				}
 			}
 		}
-		if `ftest'{
+		if `test'|`vcount'{
 			qui reg `var' `by' `covariates' `interaction', noheader 
-			mat `A'[`r', `m'+`overall'+`reverse'+`ftest'] = Ftail(e(df_m), e(df_r), e(F))
+			if `test'{
+				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'+`test'] = Ftail(e(df_m), e(df_r), e(F))
+			}
+			if `vcount'{
+				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'] = e(N)
+			}
 		}
 		loc r = `r' + (`sterr' - 1)
+	}
+	if `reverseall'{
+		loc r 0
+		qui reg `:word 1 of `by'' `varlist' `covariates' `interaction', noheader
+		foreach var of local varlist{
+			loc ++r
+			mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'] = _b[`var']
+			if `sterr' == 2{
+				loc ++r
+				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'] = _se[`var']
+				loc b _b[`var']
+				loc se _se[`var']
+				if "`stars'" != ""{
+					if abs(`b'/`se') >= invnorm(0.995) {
+						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "***"
+					}
+					else if abs(`b'/`se') >= invnorm(0.975){
+						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "**"							
+					}
+					else if abs(`b'/`se') >= invnorm(0.95){
+						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "*"							
+					}
+					else {
+						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" " "
+					}
+				}
+			}
+		}
 	}
 	if `count' | `prop' {
 		tempvar N
@@ -247,9 +282,20 @@ program orth_out, rclass
 			}
 			loc cnames "`cnames' "Coeff`standard', treatment as dep. variable""
 		}
-
-		if `ftest'{
+		if `reverseall'{
+			if `sterr' == 2 {
+				loc standard "s. & s.e."
+			}
+			else {
+				loc standard "icients"
+			}
+			loc cnames "`cnames' "Coeff`standard', treatment as dep. variable, all balance variables together""
+		}
+		if `test'{
 			loc cnames "`cnames' "p-value from joint orthogonality test of treatment arms""
+		}
+		if `vcount'{
+			loc cnames "`cnames' "N from orthogonality test""
 		}
 	}
 	else {
@@ -258,7 +304,7 @@ program orth_out, rclass
 	}
 	if "`colnum'" != "" {
 		loc column ""
-		loc p = `m'+`reverse'+`overall'+`ftest'
+		loc p = `m'+`reverse'+`overall'+`reverseall'+`test'+`vcount'
 		forvalues n = 1/`p'{
 			loc column "`column' "(`n')""
 		}
@@ -314,6 +360,18 @@ program orth_out, rclass
 					}
 				}
 			}
+			if `reverseall' & "`stars'" != ""{
+				qui su `n'
+				forvalues p = `r(min)'/`r(max)'{
+					if mod(`p', 2) == 0{
+						qui replace `A'`=`m'+`overall'+`reverse'+`reverseall'' = `A'`=`m'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'+`reverseall'''"'" ///
+							if substr(`A'`=`m'+`overall'+`reverse'+`reverseall'', 1, 1) == "(" & `n' == `p'
+					}
+				}
+			}
+		}
+		if `vcount'{
+			qui replace `A'`=`m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = substr(`A'`=`m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'', 1, length(`A'`=`m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'')-4)
 		}
 		loc p = 2
 		foreach name in `rnames'{
@@ -386,7 +444,7 @@ program orth_out, rclass
 		noi export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 	}
 	if `"`column'"' == ""{
-		forvalues n = 1/`=`m'+`reverse'+`overall'+`ftest''{
+		forvalues n = 1/`=`m'+`reverse'+`overall'+`test''{
 			loc column "`column' _"
 		}
 	}
