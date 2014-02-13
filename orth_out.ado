@@ -1,4 +1,4 @@
-*! version 2.3.0 Joe Long 9dec2013
+*! version 2.3.1 Joe Long 18dec2013
 cap program drop orth_out
 program orth_out, rclass
 	version 12
