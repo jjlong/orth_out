@@ -82,9 +82,9 @@ program orth_out, rclass
 
 		tempvar treatment_type
 		qui gen `:type `by'' `treatment_type' = `by'
-		loc by ""
-		forvalues m = 1/`ntreat' {
-			loc by "`by' `treatarm`m''"
+		loc by
+		forvalues i = 1/`ntreat' {
+			loc by "`by' `treatarm`i''"
 		}
 	}
 
@@ -447,16 +447,16 @@ program orth_out, rclass
 		qui replace `n' = 1 if `n' == .
 		sort `n'
 
-		forvalues m = 1/`:word count `cnames'' {
-			qui replace `A'`m' = "`:word `m' of `cnames''" if `n' == 1
+		forvalues i = 1/`:word count `cnames'' {
+			qui replace `A'`i' = "`:word `i' of `cnames''" if `n' == 1
 		}
 		if "`colnum'" != "" {
 			loc N = `N' + 1
 			qui set obs `N'
 			qui replace `n' = 2 if `n' == .
 			sort `n'
-			forvalues m = 1/`:word count `column'' {
-				qui replace `A'`m' = "`:word `m' of `column''" if `n' == 2
+			forvalues i = 1/`:word count `column'' {
+				qui replace `A'`i' = "`:word `i' of `column''" if `n' == 2
 			}
 		}
 		if "`title'" != "" {
