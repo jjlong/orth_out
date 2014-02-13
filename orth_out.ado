@@ -1,4 +1,4 @@
-*! version 2.6.2 Joe Long 09jan2014
+*! version 2.6.3 Joe Long 13feb2014
 program orth_out, rclass
 	version 12
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -472,9 +472,6 @@ program orth_out, rclass
 			if `count' {
 				loc normal = `bdec' != 0
 				qui replace `var' = substr(`var', 1, length(`var')-`bdec'-`normal') if `B0' == "N" & "`var'" != "`B0'"
-			}
-			if `prop' {
-				qui replace `var' = substr(`var', 2, length(`var')-2) if `B0' == "Proportion" & "`var'" != "`B0'"
 			}
 		}
 		qui ds, has(type string)
