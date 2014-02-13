@@ -7,8 +7,8 @@ program orth_out, rclass
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
-		[INTERACTion Reverse reverseall append stars]	
-	
+		[INTERACTion Reverse reverseall append stars]
+
 	cap findfile orth_out.sthlp
 	if _rc != 0 {
 		di as err "Dear Sir/Madam: please download the help file associated with orth_out.ado at the following link:"
@@ -31,7 +31,7 @@ program orth_out, rclass
 	loc by `byrep'
 	if `ntreat' > 1 {
 		tempvar marker
-		qui gen `marker' = 0 
+		qui gen `marker' = 0
 		foreach var of loc by{
 			cap confirm numeric var `var'
 			if _rc != 0{
@@ -42,8 +42,8 @@ program orth_out, rclass
 					exit 109
 				}
 			}
-			qui replace `marker' = 1 if `var' == 1 
-		} 
+			qui replace `marker' = 1 if `var' == 1
+		}
 		tempvar treatment_type
 		qui egen `treatment_type' = group(`by')
 		qui replace `treatment_type' = . if !`marker'
@@ -51,10 +51,10 @@ program orth_out, rclass
 		loc backwards 1
 	}
 	else {
-		loc backwards 0 
+		loc backwards 0
 		if "`=substr("`:type `by''", 1, 3)'" == "str"{
 				tempvar alt
-				qui encode `by', gen(`alt') 
+				qui encode `by', gen(`alt')
 				drop `by'
 				qui rename `alt' `by'
 		}
@@ -73,7 +73,7 @@ program orth_out, rclass
 		}
 
 		loc ntreat : word count `arms'
-		
+
 		loc n 0
 		foreach val of loc arms {
 			loc ++n
@@ -97,9 +97,9 @@ program orth_out, rclass
 	else{
 		loc m = `ntreat'
 	}
-	
+
 	if "`interaction'" != ""{
-		loc interaction 
+		loc interaction
 		foreach var1 of local covariates{
 			foreach var2 of local by{
 				tempvar `var1'X`var2'
@@ -108,7 +108,7 @@ program orth_out, rclass
 			}
 		}
 	}
-	
+
 	loc count 		= 1 - mi("`count'")
 	loc test 		= 1 - mi("`test'")
 	loc overall		= 1 - mi("`overall'")
@@ -118,7 +118,7 @@ program orth_out, rclass
 	loc reverse 	= 1 - mi("`reverse'")
 	loc reverseall 	= 1 - mi("`reverseall'")
 	loc vcount 		= 1 - mi("`vcount'")
-	
+
 	tempname A
 	mat `A' = J(`sterr'*`varcount'+`count'+`prop', `m'+`reverse'+`reverseall'+`overall'+`test'+`vcount', .)
 	loc r 0
@@ -133,7 +133,7 @@ program orth_out, rclass
 			mat `A'[`r', `ntreat'+1] = r(StatTotal)
 		}
 		loc j = `ntreat' + `overall'
-		
+
 		if "`compare'" != "" | "`pcompare'" != ""{
 			forvalues n = 1/`ntreat'{
 				gettoken var1 by: by
@@ -152,10 +152,10 @@ program orth_out, rclass
 									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "***"
 								}
 								else if 2*ttail(`df', abs(`b'/`se')) <= 0.05{
-									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "**"							
+									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "**"
 								}
 								else if 2*ttail(`df', abs(`b'/`se')) <= 0.10{
-									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "*"							
+									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "*"
 								}
 								else {
 									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" " "
@@ -183,10 +183,10 @@ program orth_out, rclass
 						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "***"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.05{
-						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "**"							
+						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "**"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.10{
-						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "*"							
+						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "*"
 					}
 					else {
 						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" " "
@@ -195,7 +195,7 @@ program orth_out, rclass
 			}
 		}
 		if `test' | `vcount'{
-			qui reg `var' `by' `covariates' `interaction', noheader 
+			qui reg `var' `by' `covariates' `interaction', noheader
 			if `test'{
 				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'+`test'] = Ftail(e(df_m), e(df_r), e(F))
 			}
@@ -222,10 +222,10 @@ program orth_out, rclass
 						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "***"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.05{
-						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "**"							
+						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "**"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.10{
-						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "*"							
+						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "*"
 					}
 					else {
 						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" " "
@@ -252,9 +252,9 @@ program orth_out, rclass
 		}
 		if `overall'{
 			mat `A'[`sterr'*`varcount'+`count',`ntreat'+1] = r(StatTotal)
-			if `prop'{					
+			if `prop'{
 				mat `A'[`sterr'*`varcount'+`count'+`prop',`ntreat'+1] = 1
-			}		
+			}
 		}
 		if "`compare'" != "" {
 			loc mm = `ntreat' + `overall'
@@ -265,8 +265,8 @@ program orth_out, rclass
 				gettoken num1 num: num
 				foreach num2 of loc num{
 					loc ++mm
-					mat `A'[`sterr'*`varcount'+`count',`mm'] = `A'[`sterr'*`varcount'+`count',`num1'] + `A'[`sterr'*`varcount'+`count',`num2']	
-				}				
+					mat `A'[`sterr'*`varcount'+`count',`mm'] = `A'[`sterr'*`varcount'+`count',`num1'] + `A'[`sterr'*`varcount'+`count',`num2']
+				}
 			}
 		}
 	}
@@ -331,7 +331,7 @@ program orth_out, rclass
 						loc cnames2 "`cnames2' "(`num1') vs. (`num2')""
 					}
 					else {
-						loc cnames2 "`cnames2' "(`num1') vs. (`num2'), p-value""						
+						loc cnames2 "`cnames2' "(`num1') vs. (`num2'), p-value""
 					}
 				}
 			}
@@ -376,7 +376,7 @@ program orth_out, rclass
 	if "`bdec'"==""{
 		loc bdec = 3
 	}
-	
+
 	if "`title'" == ""{
 		loc title "Orthogonality Table"
 	}
@@ -402,7 +402,7 @@ program orth_out, rclass
 		qui gen `B0' = ""
 		if `sterr' == 2{
 			foreach var of varlist `A'*{
-				qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0 
+				qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0
 			}
 			if "`compare'" != "" & "`stars'" != ""{
 				qui su `n'
@@ -451,7 +451,7 @@ program orth_out, rclass
 		forvalues m = 1/`:word count `cnames''{
 			qui replace `A'`m' = "`:word `m' of `cnames''" if `n' == 1
 		}
-		if "`colnum'" != ""{	
+		if "`colnum'" != ""{
 			loc N = `N' + 1
 			qui set obs `N'
 			qui replace `n' = 2 if `n' == .
@@ -462,15 +462,15 @@ program orth_out, rclass
 		}
 		if "`title'" != ""{
 			loc N = `N' + 1
-			qui set obs `N' 
-			qui replace `n' = 0 if `n' == . 
-			sort `n' 
+			qui set obs `N'
+			qui replace `n' = 0 if `n' == .
+			sort `n'
 			qui replace `B0' = "`title'" if `n' == 0
 		}
 		if "`notes'" != ""{
 			loc N = `N' + 1
-			qui set obs `N' 
-			sort `n' 
+			qui set obs `N'
+			sort `n'
 			qui replace `B0' = "`notes'" if mi(`n')
 		}
 		loc note = 1 - mi("`notes'")
@@ -480,7 +480,7 @@ program orth_out, rclass
 				qui replace `var' = substr(`var', 1, length(`var')-`bdec'-`normal') if `B0' == "N" & "`var'" != "`B0'"
 			}
 			if `prop'{
-				qui replace `var' = substr(`var', 2, length(`var')-2) if `B0' == "Proportion" & "`var'" != "`B0'"					
+				qui replace `var' = substr(`var', 2, length(`var')-2) if `B0' == "Proportion" & "`var'" != "`B0'"
 			}
 		}
 		qui ds, has(type string)
@@ -512,13 +512,13 @@ program orth_out, rclass
 			loc column "`column' _"
 		}
 	}
-	mat rown   `A' = `req'	
+	mat rown   `A' = `req'
 	mat coln   `A' = `column'
 	mat roweq  `A' = `rnames'
 	mat coleq  `A' = `cnames'
 	noi mat li `A', noheader format(%12.`bdec'f)
-	
-	return loc rnames `rnames' 
+
+	return loc rnames `rnames'
 	return loc cnames `cnames'
 	return loc title  `title'
 	return matrix matrix `A'
