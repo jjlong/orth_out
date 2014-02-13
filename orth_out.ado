@@ -1,5 +1,4 @@
 *! version 2.6.2 Joe Long 09jan2014
-cap program drop orth_out
 program orth_out, rclass
 	version 12
 	syntax varlist [using] [if], BY(varlist) [replace] ///
