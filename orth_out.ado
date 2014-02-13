@@ -1,4 +1,4 @@
-*! version 2.0.0 Joe Long 21oct2013
+*! version 2.1.0 Joe Long 2dec2013
 cap program drop orth_out
 program orth_out, rclass
 	version 12
@@ -7,10 +7,18 @@ program orth_out, rclass
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string)] [Ftest] [overall] ///
 		[PROPortion] [SEmean] [COVARiates(varlist)] ///
-		[INTERACTion] [Reverse] 
+		[INTERACTion] [Reverse] [APPEND] 
 		
 	qui{
 		preserve
+		if "`append'" != ""{
+			tempname B 
+			mat `B' = r(matrix)
+			loc Brow `:rownames `B''
+			loc Bcol `:colnames `B''
+			loc Breq `:roweq `B', q'
+			loc Bceq "`:coleq `B', q'"
+		}
 		if `"`if'"' != ""{
 			keep `if'
 		}
@@ -75,7 +83,6 @@ program orth_out, rclass
 		loc overall	= 1 - mi("`overall'")
 		loc prop    = 1 - mi("`proportion'")
 		loc sterr	= 2 - mi("`semean'")
-		loc attrit  = 1 - mi("`attrition'")
 		loc interact= 1 - mi("`interaction'")
 		loc reverse = 1 - mi("`reverse'")
 		
@@ -143,7 +150,12 @@ program orth_out, rclass
 				}		
 			}
 		}
-
+		
+		if "`append'" != ""{
+			tempname C
+			mat `C' = J(1, `m'+`reverse'+`overall'+`ftest', .)
+			mat `A' = `B' \ `C' \ `A' 
+		}
 		if "`nolabel'" == "" {
 			if `"`varlabel'"' != ""{
 				loc varlist2 `varlist'
@@ -207,11 +219,17 @@ program orth_out, rclass
 			}
 			loc cnames "`cnames' `cnames2'"
 			if `reverse'{
-				loc cnames "`cnames' "Coeffs. & s.e., treatment as dep. variable""
+				if `sterr' == 2 {
+					loc standard "s. & s.e."
+				}
+				else {
+					loc standard "icients"
+				}
+				loc cnames "`cnames' "Coeff`standard', treatment as dep. variable""
 			}
 
 			if `ftest'{
-				loc cnames "`cnames' "p-value from joint orthogonality test of all treatment arms""
+				loc cnames "`cnames' "p-value from joint orthogonality test of treatment arms""
 			}
 		}
 		else {
@@ -232,21 +250,47 @@ program orth_out, rclass
 		if "`title'" == ""{
 			loc title "Orthogonality Table"
 		}
+		forvalues n = 1/`varcount'{
+			loc req "`req' mean"
+			if `sterr' == 2{
+				loc req "`req' se"
+			}
+		}
+		if `count'{
+			loc req "`req' _"
+		}
+		if `prop'{
+			loc req "`req' _"
+		}
+		if "`append'" != ""{
+			loc rnames ""`Breq'" " " `rnames'"
+			loc req    "`Brow' " " `req'"
+		}
 		if "`using'" != ""{
 			clear
 			svmat `A'
 			tempvar n
-			tostring _all, replace force format(%9.`bdec'f)
+			tostring _all, replace force format(%12.`bdec'f)
 			gen `n' = _n + 2
 			tempvar B0
 			gen `B0' = ""
-			foreach var of varlist `A'*{
-				replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0 
+			if "`append'" != ""{
+				replace `n' = -1 if `n' == rowsof(`B') + `count' + `prop' + 1
+				replace `n' = `n' - 1 if `n' >= rowsof(`B') + `count' + `prop' + 1
+			}
+			if `sterr' == 2{
+				foreach var of varlist `A'*{
+					replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0 
+				}
+			}
+			if "`append'" != ""{
+				replace `n' = `n' + 1 if `n' >= rowsof(`B') + `count' + `prop' + 1
+				replace `n' = rowsof(`B') + `count' + `prop' + 1 if `n' == -1
 			}
 			loc p = 2
 			foreach name in `rnames'{
 				loc ++p
-				replace `B0' = "`name'" if `n' == `p'
+				replace `B0' = "`name'" if `n' == `p' & "`name'" != "_"
 			}
 
 			d, s
@@ -257,6 +301,11 @@ program orth_out, rclass
 
 			forvalues m = 1/`:word count `cnames''{
 				replace `A'`m' = "`:word `m' of `cnames''" if `n' == 1
+			}
+			if "`append'" != ""{
+				forvalues m = 1/`:word count `Bceq''{
+					replace `A'`m' = "`:word `m' of `Bceq''" if `n' == rowsof(`B') + `count' + `prop' + 1
+				}
 			}
 			if "`colnum'" != ""{	
 				loc N = `N' + 1
@@ -280,12 +329,14 @@ program orth_out, rclass
 				sort `n' 
 				replace `B0' = "`notes'" if mi(`n')
 			}
+			loc note = 1 - mi("`notes'")
 			foreach var of varlist `A'*{
 				if `count'{
-				replace `var' = substr(`var', 1, length(`var')-4) if `B0' == "N" & "`var'" != "`B0'"
+					loc normal = `bdec' != 0
+					replace `var' = substr(`var', 1, length(`var')-`bdec'-`normal') if `B0' == "N" & "`var'" != "`B0'"
 				}
 				if `prop'{
-				replace `var' = substr(`var', 2, length(`var')-2) if `B0' == "Proportion" & "`var'" != "`B0'"
+					replace `var' = substr(`var', 2, length(`var')-2) if `B0' == "Proportion" & "`var'" != "`B0'"					
 				}
 			}
 			ds, has(type string)
@@ -297,13 +348,20 @@ program orth_out, rclass
 			drop `n'
 			noi export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 		}
-		else {
-			noi mat li `A'
+		if `"`column'"' == ""{
+			forvalues n = 1/`=`m'+`reverse'+`overall'+`ftest''{
+				loc column "`column' _"
+			}
 		}
-		return loc colnum `column'
+		mat li `A'
+		mat rown   `A' = `req'	
+		mat coln   `A' = `column'
+		mat roweq  `A' = `rnames'
+		mat coleq  `A' = `cnames'
+		noi mat li `A', noheader format(%12.`bdec'f)
+		
 		return loc rnames `rnames' 
 		return loc cnames `cnames'
-		return loc title `title'
 		return matrix matrix `A'
 	}
 end
