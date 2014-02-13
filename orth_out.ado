@@ -1,4 +1,4 @@
-*! version 2.1.0 Joe Long 2dec2013
+*! version 2.1.1 Joe Long 2dec2013
 cap program drop orth_out
 program orth_out, rclass
 	version 12
@@ -35,9 +35,15 @@ program orth_out, rclass
 		else {
 			levelsof `by', local(arms)
 			loc n 0
+			loc vallab: val lab `by'
 			foreach val of loc arms {
 				loc ++n
-				loc cname: lab `by' `val'
+				if "`vallab'" != ""{
+					loc cname: lab `vallab' `val'
+				}
+				else{
+					loc cname: lab `by' `val'
+				}
 				loc cnames "`cnames' "`cname'""
 			}
 
@@ -117,14 +123,14 @@ program orth_out, rclass
 			}
 			loc by `by2'
 			if `reverse'{
-				reg `:word 1 of `by'' `var' `covariates' `interaction'
+				reg `:word 1 of `by'' `var' `covariates' `interaction', noheader
 				mat `A'[`r', `m'+`overall'+`reverse'] = _b[`var']
 				if `sterr' == 2{
 					mat `A'[`r'+1, `m'+`overall'+`reverse'] = _se[`var']
 				}
 			}
 			if `ftest'{
-				reg `var' `by' `covariates' `interaction'
+				qui reg `var' `by' `covariates' `interaction', noheader 
 				mat `A'[`r', `m'+`overall'+`reverse'+`ftest'] = Ftail(e(df_m), e(df_r), e(F))
 			}
 			loc r = `r' + (`sterr' - 1)
@@ -343,7 +349,6 @@ program orth_out, rclass
 			foreach var of varlist `r(varlist)'{
 				replace `var' = "" if `var' == "."
 			}
-			order _all, alpha
 			order `B0', first
 			drop `n'
 			noi export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
@@ -353,7 +358,6 @@ program orth_out, rclass
 				loc column "`column' _"
 			}
 		}
-		mat li `A'
 		mat rown   `A' = `req'	
 		mat coln   `A' = `column'
 		mat roweq  `A' = `rnames'
@@ -362,6 +366,7 @@ program orth_out, rclass
 		
 		return loc rnames `rnames' 
 		return loc cnames `cnames'
+		return loc title  `title'
 		return matrix matrix `A'
 	}
 end
