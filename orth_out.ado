@@ -1,9 +1,9 @@
-*! version 2.4.0 Joe Long 20dec2013
+*! version 2.5.0 Joe Long 06jan2014
 cap program drop orth_out
 program orth_out, rclass
 	version 12
 	syntax varlist [using] [if], BY(varlist) [replace] ///
-		[SHEET(string) SHEETREPlace BDec(numlist) COMPare count vcount]  ///
+		[SHEET(string) SHEETREPlace BDec(numlist) PCOMPare COMPare count vcount]  ///
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
@@ -16,14 +16,29 @@ program orth_out, rclass
 	loc ntreat: word count `by'
 	forvalues n = 1/`ntreat' {
 		loc word: word `n' of `by'
-		loc byrep "`word' `byrep'"
+		loc byrep "`byrep' `word'"
 	}
 	loc by `byrep'
 	if `ntreat' > 1 {
+		tempvar marker
+		qui gen `marker' = 0 
+		foreach var of loc by{
+			qui replace `marker' = 1 if `var' == 1 
+		} 
 		tempvar treatment_type
-		egen `treatment_type' = group(`by')
+		qui egen `treatment_type' = group(`by')
+		qui replace `treatment_type' = . if !`marker'
+		qui replace `treatment_type' = -`treatment_type'
+		loc backwards 1
 	}
 	else {
+		loc backwards 0 
+		if "`=substr("`:type `by''", 1, 3)'" == "str"{
+				tempvar alt
+				qui encode `by', gen(`alt') 
+				drop `by'
+				qui gen `by' = `alt' 
+		}
 		qui levelsof `by', local(arms)
 		loc n 0
 		loc vallab: val lab `by'
@@ -44,11 +59,11 @@ program orth_out, rclass
 		foreach val of loc arms {
 			loc ++n
 			tempvar treatarm`n'
-			gen `treatarm`n'' = `by' == `val'
+			qui gen `treatarm`n'' = `by' == `val'
 		}
 
 		tempvar treatment_type
-		gen `:type `by'' `treatment_type' = `by'
+		qui gen `:type `by'' `treatment_type' = `by'
 		loc by ""
 		forvalues m = 1/`ntreat'{
 			loc by "`by' `treatarm`m''"
@@ -69,21 +84,21 @@ program orth_out, rclass
 		foreach var1 of local covariates{
 			foreach var2 of local by{
 				tempvar `var1'X`var2'
-				gen ``var1'X`var2'' = `var1' * `var2'
+				qui gen ``var1'X`var2'' = `var1' * `var2'
 				loc interaction `interaction' ``var1'X`var2''
 			}
 		}
 	}
 	
-	loc count 	= 1 - mi("`count'")
-	loc ftest 	= 1 - mi("`test'")
-	loc overall	= 1 - mi("`overall'")
-	loc prop    = 1 - mi("`proportion'")
-	loc sterr	= 2 - mi("`semean'")
-	loc interact= 1 - mi("`interaction'")
-	loc reverse = 1 - mi("`reverse'")
-	loc reverseall = 1 - mi("`reverseall'")
-	loc vcount = 1 - mi("`vcount'")
+	loc count 		= 1 - mi("`count'")
+	loc test 		= 1 - mi("`test'")
+	loc overall		= 1 - mi("`overall'")
+	loc prop    	= 1 - mi("`proportion'")
+	loc sterr		= 2 - mi("`semean'")
+	loc interact	= 1 - mi("`interaction'")
+	loc reverse 	= 1 - mi("`reverse'")
+	loc reverseall 	= 1 - mi("`reverseall'")
+	loc vcount 		= 1 - mi("`vcount'")
 	
 	tempname A
 	mat `A' = J(`sterr'*`varcount'+`count'+`prop', `m'+`reverse'+`reverseall'+`overall'+`test'+`vcount', .)
@@ -99,6 +114,8 @@ program orth_out, rclass
 			mat `A'[`r', `ntreat'+1] = r(StatTotal)
 		}
 		loc j = `ntreat' + `overall'
+		
+		******ADD PCOMPARE******
 		if "`compare'" != ""{
 			forvalues n = 1/`ntreat'{
 				gettoken var1 by: by
@@ -193,7 +210,7 @@ program orth_out, rclass
 	}
 	if `count' | `prop' {
 		tempvar N
-		gen `N' = 1
+		qui gen `N' = 1
 		qui tabstat `N', by(`treatment_type') stats(n) save
 		forvalues n = 1/`ntreat'{
 			if `count' {
@@ -249,13 +266,13 @@ program orth_out, rclass
 				loc cnames "`cnames' (`n')"
 			}
 		}
-		else if "`arms'" == ""{
+		else if `backwards'{
 			foreach var of loc by{
 				loc cname: var lab `var'
 				if "`cname'" == ""{
 					loc cname "`var'"
 				}
-				loc cnames ""`cname'" `cnames'"
+				loc cnames "`cnames' "`cname'""
 			}
 		}
 		forvalues n = 1/`ntreat'{
@@ -328,7 +345,7 @@ program orth_out, rclass
 	if `prop'{
 		loc req "`req' _"
 	}
-	if "`using'" != ""{
+	if `"`using'"' != ""{
 		clear
 		qui svmat `A'
 		tempvar n
@@ -346,7 +363,7 @@ program orth_out, rclass
 					forvalues p = `r(min)'/`r(max)'{
 						if mod(`p', 2) == 0{
 							qui replace `A'`=`j'+`ntreat'+`overall'' = `A'`=`j'+`ntreat'+`overall'' + "`:word `=`p'/2' of "`star_`j''"'" ///
-								if substr(`A'`=`j'+`ntreat'+`overall'', 1, 1) == "(" & `n' == `p'
+							if `n' == `p' - 1
 						}
 					}
 				}
@@ -356,7 +373,7 @@ program orth_out, rclass
 				forvalues p = `r(min)'/`r(max)'{
 					if mod(`p', 2) == 0{
 						qui replace `A'`=`m'+`overall'+`reverse'' = `A'`=`m'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'''"'" ///
-							if substr(`A'`=`m'+`overall'+`reverse'', 1, 1) == "(" & `n' == `p'
+						if `n' == `p' - 1
 					}
 				}
 			}
@@ -365,7 +382,7 @@ program orth_out, rclass
 				forvalues p = `r(min)'/`r(max)'{
 					if mod(`p', 2) == 0{
 						qui replace `A'`=`m'+`overall'+`reverse'+`reverseall'' = `A'`=`m'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'+`reverseall'''"'" ///
-							if substr(`A'`=`m'+`overall'+`reverse'+`reverseall'', 1, 1) == "(" & `n' == `p'
+						if `n' = `p' - 1
 					}
 				}
 			}
