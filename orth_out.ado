@@ -1,4 +1,4 @@
-*! version 2.6.1 Joe Long 07jan2014
+*! version 2.6.2 Joe Long 09jan2014
 cap program drop orth_out
 program orth_out, rclass
 	version 12
@@ -8,14 +8,20 @@ program orth_out, rclass
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
 		[INTERACTion Reverse reverseall append stars]	
-		
+	
+	cap findfile orth_out.sthlp
+	if _rc != 0 {
+		di as err "Dear Sir/Madam: please download the help file associated with orth_out.ado at the following link:"
+		di "https://ipastorage.box.com/s/ljz0kaqbv2815rgzvbxf"
+		exit 601
+	}
 	preserve
 	if `"`if'"' != ""{
 		qui keep `if'
 	}
 	if "`compare'" != "" & "`pcompare'" != ""{
 		di as err "Cannot specify compare and pcompare together"
-		err 198
+		exit 198
 	}
 	loc ntreat: word count `by'
 	forvalues n = 1/`ntreat' {
@@ -33,7 +39,7 @@ program orth_out, rclass
 				if _rc != 0{
 					di as err "Cannot process non-numeric binary strings."
 					di as err "(srsly?)"
-					err 109
+					exit 109
 				}
 			}
 			qui replace `marker' = 1 if `var' == 1 
@@ -238,7 +244,10 @@ program orth_out, rclass
 			}
 			if `prop' {
 				mat `A'[`sterr'*`varcount'+`count'+`prop',`n'] = r(StatTotal)
-				mat `A'[`sterr'*`varcount'+`count'+`prop',`n'] = `A'[`sterr'*`varcount'+`count',`n']/`A'[`sterr'*`varcount'+`count'+`prop',`n']
+				tempname B
+				mat `B' = r(Stat`n')
+				loc numerator = `B'[1,1]
+				mat `A'[`sterr'*`varcount'+`count'+`prop',`n'] = `numerator'/`A'[`sterr'*`varcount'+`count'+`prop',`n']
 			}
 		}
 		if `overall'{
@@ -248,15 +257,15 @@ program orth_out, rclass
 			}		
 		}
 		if "`compare'" != "" {
-			loc m = `ntreat' + `overall'
+			loc mm = `ntreat' + `overall'
 			forvalues n = 1/`ntreat'{
 				loc num "`num' `n'"
 			}
 			forvalues n = 1/`ntreat'{
 				gettoken num1 num: num
 				foreach num2 of loc num{
-					loc ++m
-					mat `A'[`sterr'*`varcount'+`count',`m'] = `A'[`sterr'*`varcount'+`count',`num1'] + `A'[`sterr'*`varcount'+`count',`num2']	
+					loc ++mm
+					mat `A'[`sterr'*`varcount'+`count',`mm'] = `A'[`sterr'*`varcount'+`count',`num1'] + `A'[`sterr'*`varcount'+`count',`num2']	
 				}				
 			}
 		}
@@ -420,7 +429,7 @@ program orth_out, rclass
 				forvalues p = `r(min)'/`r(max)'{
 					if mod(`p', 2) == 0{
 						qui replace `A'`=`m'+`overall'+`reverse'+`reverseall'' = `A'`=`m'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'+`reverseall'''"'" ///
-						if `n' = `p' - 1
+						if `n' == `p' - 1
 					}
 				}
 			}
@@ -462,7 +471,7 @@ program orth_out, rclass
 			loc N = `N' + 1
 			qui set obs `N' 
 			sort `n' 
-			replace `B0' = "`notes'" if mi(`n')
+			qui replace `B0' = "`notes'" if mi(`n')
 		}
 		loc note = 1 - mi("`notes'")
 		foreach var of varlist `A'*{
@@ -484,7 +493,7 @@ program orth_out, rclass
 			qui ds
 			if `:word count `r(varlist)'' > 26{
 				di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions. kthx"
-				err 197
+				exit 197
 			}
 			forvalues q = 1/`:word count `r(varlist)''{
 				rename `:word `q' of `r(varlist)'' `:word `q' of `c(ALPHA)''
