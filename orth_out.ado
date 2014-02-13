@@ -1,11 +1,14 @@
-*! version 1.0.0 Joe Long 21oct2013
+*! version 2.0.0 Joe Long 21oct2013
 cap program drop orth_out
 program orth_out, rclass
 	version 12
-	syntax varlist using/ [if], BY(varlist) [replace append] ///
-		[SHEETname(string) NOGrid BDec(numlist) COMPare count]  ///
+	syntax varlist [using] [if], BY(varlist) [replace] ///
+		[SHEET(string) SHEETREPlace BDec(numlist) COMPare count]  ///
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
-		[COLNUM Title(string) NOTEs(string)]
+		[COLNUM Title(string) NOTEs(string)] [Ftest] [overall] ///
+		[PROPortion] [SEmean] [COVARiates(varlist)] ///
+		[INTERACTion] [Reverse] 
+		
 	qui{
 		preserve
 		if `"`if'"' != ""{
@@ -55,18 +58,41 @@ program orth_out, rclass
 		else{
 			loc m = `ntreat'
 		}
-		loc count = 1 - missing("`count'")
+		
+		if "`interaction'" != ""{
+			loc interaction 
+			foreach var1 of local covariates{
+				foreach var2 of local by{
+					tempvar `var1'X`var2'
+					gen ``var1'X`var2'' = `var1' * `var2'
+					loc interaction `interaction' ``var1'X`var2''
+				}
+			}
+		}
+		
+		loc count 	= 1 - mi("`count'")
+		loc ftest 	= 1 - mi("`ftest'")
+		loc overall	= 1 - mi("`overall'")
+		loc prop    = 1 - mi("`proportion'")
+		loc sterr	= 2 - mi("`semean'")
+		loc attrit  = 1 - mi("`attrition'")
+		loc interact= 1 - mi("`interaction'")
+		loc reverse = 1 - mi("`reverse'")
+		
 		tempname A
-		mat `A' = J(2*`varcount'+`count', `m'+1, .)
+		mat `A' = J(`sterr'*`varcount'+`count'+`prop', `m'+`reverse'+`overall'+`ftest', .)
 		loc r 0
 		foreach var in `varlist' {
 			loc ++r
 
-			tabstat `var' , by(`treatment_type') stats(mean semean) save
+			tabstat `var' , by(`treatment_type') stats(mean `semean') save
 			forvalues n = 1/`ntreat'{
 				mat `A'[`r',`n'] = r(Stat`n')
-				}
-			loc j = `ntreat'
+			}
+			if `overall'{
+				mat `A'[`r', `ntreat'+1] = r(StatTotal)
+			}
+			loc j = `ntreat' + `overall'
 			if "`compare'" != ""{
 				forvalues n = 1/`ntreat'{
 					gettoken var1 by: by
@@ -76,22 +102,45 @@ program orth_out, rclass
 						loc b = _b[`var1']
 						loc se = _se[`var1']
 						mat `A'[`r',`j'] = `b'
-						mat `A'[`r'+1,`j'] = `se'
+						if "`semean'" != ""{
+							mat `A'[`r'+1,`j'] = `se'
+						}
 					}
 				}
 			}
 			loc by `by2'
-			reg `var' `by2'
-			mat `A'[`r', `m'+1] = Ftail(e(df_m), e(df_r), e(F))
-
-			loc ++r
+			if `reverse'{
+				reg `:word 1 of `by'' `var' `covariates' `interaction'
+				mat `A'[`r', `m'+`overall'+`reverse'] = _b[`var']
+				if `sterr' == 2{
+					mat `A'[`r'+1, `m'+`overall'+`reverse'] = _se[`var']
+				}
+			}
+			if `ftest'{
+				reg `var' `by' `covariates' `interaction'
+				mat `A'[`r', `m'+`overall'+`reverse'+`ftest'] = Ftail(e(df_m), e(df_r), e(F))
+			}
+			loc r = `r' + (`sterr' - 1)
 		}
-		if `count' {
-			tempvar count
-			gen `count' = 1
-			tabstat `count', by(`treatment_type') stats(n) save
+		
+		if `count' | `prop' {
+			tempvar N
+			gen `N' = 1
+			tabstat `N', by(`treatment_type') stats(n) save
 			forvalues n = 1/`ntreat'{
-				mat `A'[2*`varcount'+1,`n'] = r(Stat`n')
+				if `count' {
+					mat `A'[`sterr'*`varcount'+`count',`n'] = r(Stat`n')
+				}
+				if `prop' {
+					mat `A'[`sterr'*`varcount'+`count'+`prop',`n'] = r(StatTotal)
+					mat `A'[`sterr'*`varcount'+`count'+`prop',`n'] = `A'[`sterr'*`varcount'+`count',`n']/`A'[`sterr'*`varcount'+`count'+`prop',`n']
+				}
+			}
+			if `overall'{
+				mat `A'[`sterr'*`varcount'+`count',`ntreat'+1] = r(StatTotal)
+				if `prop'{					
+					mat `A'[`sterr'*`varcount'+`count'+`prop',`ntreat'+1] = 1
+				}		
 			}
 		}
 
@@ -109,10 +158,18 @@ program orth_out, rclass
 				if "`rname'" == ""{
 					loc rname `var'
 				}
-				loc rnames "`rnames' "`rname'" " ""
+				if "`semean'"!=""{
+					loc rnames "`rnames' "`rname'" " ""
+				}
+				else {
+					loc rnames "`rnames' "`rname'""
+				}
 			}
 			if `count' {
 				loc rnames "`rnames' "N""
+			}
+			if `prop' {
+				loc rnames "`rnames' "Proportion""
 			}
 			if "`armlabel'"!=""{
 				loc ccount: word count `armlabel'
@@ -137,6 +194,9 @@ program orth_out, rclass
 			forvalues n = 1/`ntreat'{
 				loc num "`num' `n'"
 			}
+			if `overall'{
+				loc cnames "`cnames' "Overall""
+			}
 			if "`compare'" != ""{
 				forvalues n = 1/`ntreat'{
 				gettoken num1 num: num
@@ -145,7 +205,14 @@ program orth_out, rclass
 					}
 				}
 			}
-			loc cnames "`cnames' `cnames2' "p-value from joint orthogonality test of all treatment arms""
+			loc cnames "`cnames' `cnames2'"
+			if `reverse'{
+				loc cnames "`cnames' "Coeffs. & s.e., treatment as dep. variable""
+			}
+
+			if `ftest'{
+				loc cnames "`cnames' "p-value from joint orthogonality test of all treatment arms""
+			}
 		}
 		else {
 			loc rnames ""
@@ -153,39 +220,90 @@ program orth_out, rclass
 		}
 		if "`colnum'" != "" {
 			loc column ""
-			forvalues n = 0/`m'{
-				loc p = `n' + 1
-				loc column "`column' "(`p')""
+			loc p = `m'+`reverse'+`overall'+`ftest'
+			forvalues n = 1/`p'{
+				loc column "`column' "(`n')""
 			}
 		}
 		if "`bdec'"==""{
 			loc bdec = 3
 		}
-		loc format "SCCR0"
-		loc labformat "SCLR0"
-		loc rownum = 2*`varcount'
-		forvalues n = 1/`rownum'{
-			loc labformat "`labformat' SCLR0"
-			loc format "`format' NCCR`bdec'"
-		}
-		loc format "`format' SCCR0"
+		
 		if "`title'" == ""{
 			loc title "Orthogonality Table"
 		}
-		if "`nogrid'" == "nogrid"{
-			loc nogrid ", nogridlines"
+		if "`using'" != ""{
+			clear
+			svmat `A'
+			tempvar n
+			tostring _all, replace force format(%9.`bdec'f)
+			gen `n' = _n + 2
+			tempvar B0
+			gen `B0' = ""
+			foreach var of varlist `A'*{
+				replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0 
+			}
+			loc p = 2
+			foreach name in `rnames'{
+				loc ++p
+				replace `B0' = "`name'" if `n' == `p'
+			}
+
+			d, s
+			loc N = `r(N)' + 1
+			set obs `N'
+			replace `n' = 1 if `n' == .
+			sort `n'
+
+			forvalues m = 1/`:word count `cnames''{
+				replace `A'`m' = "`:word `m' of `cnames''" if `n' == 1
+			}
+			if "`colnum'" != ""{	
+				loc N = `N' + 1
+				set obs `N'
+				replace `n' = 2 if `n' == .
+				sort `n'
+				forvalues m = 1/`:word count `column''{
+					replace `A'`m' = "`:word `m' of `column''" if `n' == 2
+				}
+			}
+			if "`title'" != ""{
+				loc N = `N' + 1
+				set obs `N' 
+				replace `n' = 0 if `n' == . 
+				sort `n' 
+				replace `B0' = "`title'" if `n' == 0
+			}
+			if "`notes'" != ""{
+				loc N = `N' + 1
+				set obs `N' 
+				sort `n' 
+				replace `B0' = "`notes'" if mi(`n')
+			}
+			foreach var of varlist `A'*{
+				if `count'{
+				replace `var' = substr(`var', 1, length(`var')-4) if `B0' == "N" & "`var'" != "`B0'"
+				}
+				if `prop'{
+				replace `var' = substr(`var', 2, length(`var')-2) if `B0' == "Proportion" & "`var'" != "`B0'"
+				}
+			}
+			ds, has(type string)
+			foreach var of varlist `r(varlist)'{
+				replace `var' = "" if `var' == "."
+			}
+			order _all, alpha
+			order `B0', first
+			drop `n'
+			noi export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 		}
-		*Could here convert A to a dataset and then export it out to get the parentheses:
-		*drop everything, turn column names into variables (+1 for row names), set obs to row number, string everything, add parentheses, export
-		noi xml_tab `A', rnames(`rnames') cnames(`column') ceq(`cnames') showeq  ///
-		sheet(`sheetname' `nogrid')  save("`using'") font("Times New Roman" 10) ///
-		`replace' `append' line(SCOL_NAMES 2 COL_NAMES 2 r`r' 2 LAST_ROW 13) ///
-		format((`labformat') (`format')) title(`title') notes(`notes')
-		
-		return loc rownum `:word count `:rownames A''
-		return loc colnum `:word count `:colnames A''
+		else {
+			noi mat li `A'
+		}
+		return loc colnum `column'
 		return loc rnames `rnames' 
 		return loc cnames `cnames'
 		return loc title `title'
+		return matrix matrix `A'
 	}
 end
