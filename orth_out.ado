@@ -10,8 +10,7 @@ program orth_out, rclass
 
 	cap findfile orth_out.sthlp
 	if _rc != 0 {
-		di as err "Dear Sir/Madam: please download the help file associated with orth_out.ado at the following link:"
-		di as smcl `"{browse "https://ipastorage.box.com/s/ljz0kaqbv2815rgzvbxf"}"'
+		di as smcl `"Please download the {browse "https://ipastorage.box.com/s/ljz0kaqbv2815rgzvbxf":help file} associated with orth_out.ado"'
 		exit 601
 	}
 	preserve
