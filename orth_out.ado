@@ -502,10 +502,10 @@ program orth_out, rclass
 			qui save `temp'
 			import excel `using', clear
 			append using `temp'
-			noi di "table appended to `:word 2 of `using''"
+			di "table appended to `:word 2 of `using''"
 			loc replace replace
 		}
-		noi export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
+		export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 	}
 	if `"`column'"' == ""{
 		forvalues n = 1/`=`m'+`reverse'+`overall'+`test''{
@@ -516,7 +516,7 @@ program orth_out, rclass
 	mat coln   `A' = `column'
 	mat roweq  `A' = `rnames'
 	mat coleq  `A' = `cnames'
-	noi mat li `A', noheader format(%12.`bdec'f)
+	mat li `A', noheader format(%12.`bdec'f)
 
 	return loc rnames `rnames'
 	return loc cnames `cnames'
