@@ -23,11 +23,6 @@ program orth_out, rclass
 		exit 198
 	}
 	loc ntreat: word count `by'
-	forvalues n = 1/`ntreat' {
-		loc word: word `n' of `by'
-		loc byrep "`byrep' `word'"
-	}
-	loc by `byrep'
 	if `ntreat' > 1 {
 		tempvar marker
 		gen `marker' = 0
