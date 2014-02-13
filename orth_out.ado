@@ -1,4 +1,4 @@
-*! version 2.5.0 Joe Long 06jan2014
+*! version 2.6.1 Joe Long 07jan2014
 cap program drop orth_out
 program orth_out, rclass
 	version 12
@@ -13,6 +13,10 @@ program orth_out, rclass
 	if `"`if'"' != ""{
 		qui keep `if'
 	}
+	if "`compare'" != "" & "`pcompare'" != ""{
+		di as err "Cannot specify compare and pcompare together"
+		err 198
+	}
 	loc ntreat: word count `by'
 	forvalues n = 1/`ntreat' {
 		loc word: word `n' of `by'
@@ -23,6 +27,15 @@ program orth_out, rclass
 		tempvar marker
 		qui gen `marker' = 0 
 		foreach var of loc by{
+			cap confirm numeric var `var'
+			if _rc != 0{
+				qui cap destring `var', replace
+				if _rc != 0{
+					di as err "Cannot process non-numeric binary strings."
+					di as err "(srsly?)"
+					err 109
+				}
+			}
 			qui replace `marker' = 1 if `var' == 1 
 		} 
 		tempvar treatment_type
@@ -37,7 +50,7 @@ program orth_out, rclass
 				tempvar alt
 				qui encode `by', gen(`alt') 
 				drop `by'
-				qui gen `by' = `alt' 
+				qui rename `alt' `by'
 		}
 		qui levelsof `by', local(arms)
 		loc n 0
@@ -72,7 +85,7 @@ program orth_out, rclass
 
 	loc varcount: word count `varlist'
 	loc by2 `by'
-	if "`compare'" != ""{
+	if "`compare'" != "" | "`pcompare'" != ""{
 		loc m = (`ntreat'^2+`ntreat')/2
 	}
 	else{
@@ -115,8 +128,7 @@ program orth_out, rclass
 		}
 		loc j = `ntreat' + `overall'
 		
-		******ADD PCOMPARE******
-		if "`compare'" != ""{
+		if "`compare'" != "" | "`pcompare'" != ""{
 			forvalues n = 1/`ntreat'{
 				gettoken var1 by: by
 				foreach var2 of loc by{
@@ -124,23 +136,29 @@ program orth_out, rclass
 					loc ++j
 					loc b = _b[`var1']
 					loc se = _se[`var1']
-					mat `A'[`r',`j'] = `b'
-					if "`semean'" != ""{
-						mat `A'[`r'+1,`j'] = `se'
-						if "`stars'" != ""{
-							if abs(`b'/`se') >= invnorm(0.995) {
-								loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "***"
-							}
-							else if abs(`b'/`se') >= invnorm(0.975){
-								loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "**"							
-							}
-							else if abs(`b'/`se') >= invnorm(0.95){
-								loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "*"							
-							}
-							else {
-								loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" " "
+					loc df = e(N) - 1
+					if "`compare'" != ""{
+						mat `A'[`r',`j'] = `b'
+						if "`semean'" != ""{
+							mat `A'[`r'+1,`j'] = `se'
+							if "`stars'" != ""{
+								if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
+									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "***"
+								}
+								else if 2*ttail(`df', abs(`b'/`se')) <= 0.05{
+									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "**"							
+								}
+								else if 2*ttail(`df', abs(`b'/`se')) <= 0.10{
+									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "*"							
+								}
+								else {
+									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" " "
+								}
 							}
 						}
+					}
+					else {
+						mat `A'[`r',`j'] = 2*ttail(`df', abs(`b'/`se'))
 					}
 				}
 			}
@@ -153,14 +171,15 @@ program orth_out, rclass
 				mat `A'[`r'+1, `m'+`overall'+`reverse'] = _se[`var']
 				loc b _b[`var']
 				loc se _se[`var']
+				loc df = e(N) - 1
 				if "`stars'" != ""{
-					if abs(`b'/`se') >= invnorm(0.995) {
+					if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
 						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "***"
 					}
-					else if abs(`b'/`se') >= invnorm(0.975){
+					else if 2*ttail(`df', abs(`b'/`se')) <= 0.05{
 						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "**"							
 					}
-					else if abs(`b'/`se') >= invnorm(0.95){
+					else if 2*ttail(`df', abs(`b'/`se')) <= 0.10{
 						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "*"							
 					}
 					else {
@@ -169,7 +188,7 @@ program orth_out, rclass
 				}
 			}
 		}
-		if `test'|`vcount'{
+		if `test' | `vcount'{
 			qui reg `var' `by' `covariates' `interaction', noheader 
 			if `test'{
 				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'+`test'] = Ftail(e(df_m), e(df_r), e(F))
@@ -191,14 +210,15 @@ program orth_out, rclass
 				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'] = _se[`var']
 				loc b _b[`var']
 				loc se _se[`var']
+				loc df = e(N) - 1
 				if "`stars'" != ""{
-					if abs(`b'/`se') >= invnorm(0.995) {
+					if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
 						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "***"
 					}
-					else if abs(`b'/`se') >= invnorm(0.975){
+					else if 2*ttail(`df', abs(`b'/`se')) <= 0.05{
 						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "**"							
 					}
-					else if abs(`b'/`se') >= invnorm(0.95){
+					else if 2*ttail(`df', abs(`b'/`se')) <= 0.10{
 						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "*"							
 					}
 					else {
@@ -226,6 +246,19 @@ program orth_out, rclass
 			if `prop'{					
 				mat `A'[`sterr'*`varcount'+`count'+`prop',`ntreat'+1] = 1
 			}		
+		}
+		if "`compare'" != "" {
+			loc m = `ntreat' + `overall'
+			forvalues n = 1/`ntreat'{
+				loc num "`num' `n'"
+			}
+			forvalues n = 1/`ntreat'{
+				gettoken num1 num: num
+				foreach num2 of loc num{
+					loc ++m
+					mat `A'[`sterr'*`varcount'+`count',`m'] = `A'[`sterr'*`varcount'+`count',`num1'] + `A'[`sterr'*`varcount'+`count',`num2']	
+				}				
+			}
 		}
 	}
 	if "`nolabel'" == "" {
@@ -281,11 +314,16 @@ program orth_out, rclass
 		if `overall'{
 			loc cnames "`cnames' "Overall""
 		}
-		if "`compare'" != ""{
+		if "`compare'" != "" | "`pcompare'" != ""{
 			forvalues n = 1/`ntreat'{
 			gettoken num1 num: num
 				foreach num2 of loc num{
-					loc cnames2 "`cnames2' "(`num1') vs. (`num2')""
+					if "`compare'" != ""{
+						loc cnames2 "`cnames2' "(`num1') vs. (`num2')""
+					}
+					else {
+						loc cnames2 "`cnames2' "(`num1') vs. (`num2'), p-value""						
+					}
 				}
 			}
 		}
@@ -445,7 +483,7 @@ program orth_out, rclass
 		if "`append'" != ""{
 			qui ds
 			if `:word count `r(varlist)'' > 26{
-				di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions."
+				di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions. kthx"
 				err 197
 			}
 			forvalues q = 1/`:word count `r(varlist)''{
