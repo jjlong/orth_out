@@ -101,9 +101,9 @@ program orth_out, rclass
 		loc interaction
 		foreach var1 of local covariates {
 			foreach var2 of local by {
-				tempvar `var1'X`var2'
-				qui gen ``var1'X`var2'' = `var1' * `var2'
-				loc interaction `interaction' ``var1'X`var2''
+				tempvar temp
+				qui gen `temp' = `var1' * `var2'
+				loc interaction `interaction' `temp'
 			}
 		}
 	}
