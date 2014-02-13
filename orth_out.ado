@@ -30,11 +30,11 @@ program orth_out, rclass
 	loc by `byrep'
 	if `ntreat' > 1 {
 		tempvar marker
-		qui gen `marker' = 0
+		gen `marker' = 0
 		foreach var of loc by {
 			cap confirm numeric var `var'
 			if _rc != 0 {
-				qui cap destring `var', replace
+				cap destring `var', replace
 				if _rc != 0 {
 					di as err "Cannot process non-numeric binary strings."
 					di as err "(srsly?)"
@@ -77,7 +77,7 @@ program orth_out, rclass
 		foreach val of loc arms {
 			loc ++n
 			tempvar treatarm`n'
-			qui gen `treatarm`n'' = `by' == `val'
+			gen `treatarm`n'' = `by' == `val'
 		}
 
 		tempvar treatment_type
@@ -235,7 +235,7 @@ program orth_out, rclass
 	}
 	if `count' | `prop' {
 		tempvar N
-		qui gen `N' = 1
+		gen `N' = 1
 		qui tabstat `N', by(`treatment_type') stats(n) save
 		forvalues n = 1/`ntreat' {
 			if `count' {
@@ -396,7 +396,7 @@ program orth_out, rclass
 		qui svmat `A'
 		tempvar n
 		qui tostring _all, replace force format(%12.`bdec'f)
-		qui gen `n' = _n + 2
+		gen `n' = _n + 2
 		tempvar B0
 		qui gen `B0' = ""
 		if `sterr' == 2 {
