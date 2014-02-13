@@ -53,10 +53,10 @@ program orth_out, rclass
 	else {
 		loc backwards 0
 		if "`=substr("`:type `by''", 1, 3)'" == "str"{
-				tempvar alt
-				qui encode `by', gen(`alt')
-				drop `by'
-				qui rename `alt' `by'
+			tempvar alt
+			qui encode `by', gen(`alt')
+			drop `by'
+			qui rename `alt' `by'
 		}
 		qui levelsof `by', local(arms)
 		loc n 0
@@ -299,9 +299,9 @@ program orth_out, rclass
 		}
 		if "`armlabel'"!=""{
 			loc ccount: word count `armlabel'
-				if `ccount' == `ntreat'{
-					loc cnames `armlabel'
-				}
+			if `ccount' == `ntreat'{
+				loc cnames `armlabel'
+			}
 		}
 		else if "`numlabel'" != ""{
 			forvalues n = 1/`ntreat'{
@@ -325,7 +325,7 @@ program orth_out, rclass
 		}
 		if "`compare'" != "" | "`pcompare'" != ""{
 			forvalues n = 1/`ntreat'{
-			gettoken num1 num: num
+				gettoken num1 num: num
 				foreach num2 of loc num{
 					if "`compare'" != ""{
 						loc cnames2 "`cnames2' "(`num1') vs. (`num2')""
@@ -410,7 +410,7 @@ program orth_out, rclass
 					forvalues p = `r(min)'/`r(max)'{
 						if mod(`p', 2) == 0{
 							qui replace `A'`=`j'+`ntreat'+`overall'' = `A'`=`j'+`ntreat'+`overall'' + "`:word `=`p'/2' of "`star_`j''"'" ///
-							if `n' == `p' - 1
+								if `n' == `p' - 1
 						}
 					}
 				}
@@ -420,7 +420,7 @@ program orth_out, rclass
 				forvalues p = `r(min)'/`r(max)'{
 					if mod(`p', 2) == 0{
 						qui replace `A'`=`m'+`overall'+`reverse'' = `A'`=`m'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'''"'" ///
-						if `n' == `p' - 1
+							if `n' == `p' - 1
 					}
 				}
 			}
@@ -429,7 +429,7 @@ program orth_out, rclass
 				forvalues p = `r(min)'/`r(max)'{
 					if mod(`p', 2) == 0{
 						qui replace `A'`=`m'+`overall'+`reverse'+`reverseall'' = `A'`=`m'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'+`reverseall'''"'" ///
-						if `n' == `p' - 1
+							if `n' == `p' - 1
 					}
 				}
 			}
