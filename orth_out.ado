@@ -7,12 +7,14 @@ program orth_out, rclass
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
 		[INTERACTion Reverse reverseall append stars]
-
+		
+	*Make sure the help file is there
 	cap findfile orth_out.sthlp
 	if _rc != 0 {
 		di as smcl `"Please download the {browse "https://ipastorage.box.com/s/ljz0kaqbv2815rgzvbxf":help file} associated with orth_out.ado"'
 		exit 601
 	}
+	
 	preserve
 	if `"`if'"' != "" {
 		qui keep `if'
@@ -21,6 +23,8 @@ program orth_out, rclass
 		di as err "Cannot specify compare and pcompare together"
 		exit 198
 	}
+	
+	*Generate single treatment variable with levels for each treatment arm
 	loc ntreat: word count `by'
 	if `ntreat' > 1 {
 		tempvar marker
@@ -84,11 +88,13 @@ program orth_out, rclass
 
 	loc varcount: word count `varlist'
 	loc by2 `by'
+	
+	*Determine the number of columns 
 	if "`compare'" != "" | "`pcompare'" != "" {
-		loc m = (`ntreat'^2+`ntreat')/2
+		loc base = (`ntreat'^2+`ntreat')/2
 	}
 	else {
-		loc m = `ntreat'
+		loc base = `ntreat'
 	}
 
 	if "`interaction'" != "" {
@@ -101,7 +107,8 @@ program orth_out, rclass
 			}
 		}
 	}
-
+	
+	*Create binary indicators for each option that will alter the dimension of the matrix to which the results are stored.
 	loc count 		= 1 - mi("`count'")
 	loc test 		= 1 - mi("`test'")
 	loc overall		= 1 - mi("`overall'")
@@ -113,11 +120,12 @@ program orth_out, rclass
 	loc vcount 		= 1 - mi("`vcount'")
 
 	tempname A
-	mat `A' = J(`sterr'*`varcount'+`count'+`prop', `m'+`reverse'+`reverseall'+`overall'+`test'+`vcount', .)
+	mat `A' = J(`sterr'*`varcount'+`count'+`prop', `base'+`reverse'+`reverseall'+`overall'+`test'+`vcount', .)
 	loc r 0
 	foreach var in `varlist' {
 		loc ++r
-
+		
+		*Basic mean/se
 		qui tabstat `var' , by(`treatment_type') stats(mean `semean') save
 		forvalues n = 1/`ntreat' {
 			mat `A'[`r',`n'] = r(Stat`n')
@@ -126,7 +134,8 @@ program orth_out, rclass
 			mat `A'[`r', `ntreat'+1] = r(StatTotal)
 		}
 		loc j = `ntreat' + `overall'
-
+		
+		*Adding mean/se for treatment arm comparisons
 		if "`compare'" != "" | "`pcompare'" != "" {
 			forvalues n = 1/`ntreat' {
 				gettoken var1 by: by
@@ -136,7 +145,10 @@ program orth_out, rclass
 					loc b = _b[`var1']
 					loc se = _se[`var1']
 					loc df = e(N) - 1
-					if "`compare'" != "" {
+					if "`pcompare'" != "" {
+						mat `A'[`r',`j'] = 2*ttail(`df', abs(`b'/`se'))
+					}
+					else {
 						mat `A'[`r',`j'] = `b'
 						if "`semean'" != "" {
 							mat `A'[`r'+1,`j'] = `se'
@@ -156,33 +168,30 @@ program orth_out, rclass
 							}
 						}
 					}
-					else {
-						mat `A'[`r',`j'] = 2*ttail(`df', abs(`b'/`se'))
-					}
 				}
 			}
 		}
 		loc by `by2'
 		if `reverse' {
 			qui reg `:word 1 of `by'' `var' `covariates' `interaction', noheader
-			mat `A'[`r', `m'+`overall'+`reverse'] = _b[`var']
+			mat `A'[`r', `base'+`overall'+`reverse'] = _b[`var']
 			if `sterr' == 2 {
-				mat `A'[`r'+1, `m'+`overall'+`reverse'] = _se[`var']
+				mat `A'[`r'+1, `base'+`overall'+`reverse'] = _se[`var']
 				loc b _b[`var']
 				loc se _se[`var']
 				loc df = e(N) - 1
 				if "`stars'" != "" {
 					if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
-						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "***"
+						loc star_`=`base'+`overall'+`reverse'' "`star_`=`base'+`overall'+`reverse'''" "***"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.05 {
-						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "**"
+						loc star_`=`base'+`overall'+`reverse'' "`star_`=`base'+`overall'+`reverse'''" "**"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.10 {
-						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" "*"
+						loc star_`=`base'+`overall'+`reverse'' "`star_`=`base'+`overall'+`reverse'''" "*"
 					}
 					else {
-						loc star_`=`m'+`overall'+`reverse'' "`star_`=`m'+`overall'+`reverse'''" " "
+						loc star_`=`base'+`overall'+`reverse'' "`star_`=`base'+`overall'+`reverse'''" " "
 					}
 				}
 			}
@@ -190,10 +199,10 @@ program orth_out, rclass
 		if `test' | `vcount' {
 			qui reg `var' `by' `covariates' `interaction', noheader
 			if `test' {
-				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'+`test'] = Ftail(e(df_m), e(df_r), e(F))
+				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'+`test'] = Ftail(e(df_m), e(df_r), e(F))
 			}
 			if `vcount' {
-				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'] = e(N)
+				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'] = e(N)
 			}
 		}
 		loc r = `r' + (`sterr' - 1)
@@ -203,25 +212,25 @@ program orth_out, rclass
 		qui reg `:word 1 of `by'' `varlist' `covariates' `interaction', noheader
 		foreach var of local varlist {
 			loc ++r
-			mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'] = _b[`var']
+			mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'] = _b[`var']
 			if `sterr' == 2 {
 				loc ++r
-				mat `A'[`r', `m'+`overall'+`reverse'+`reverseall'] = _se[`var']
+				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'] = _se[`var']
 				loc b _b[`var']
 				loc se _se[`var']
 				loc df = e(N) - 1
 				if "`stars'" != "" {
 					if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
-						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "***"
+						loc star_`=`base'+`overall'+`reverse'+`reverseall'' "`star_`=`base'+`overall'+`reverse'+`reverseall'''" "***"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.05 {
-						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "**"
+						loc star_`=`base'+`overall'+`reverse'+`reverseall'' "`star_`=`base'+`overall'+`reverse'+`reverseall'''" "**"
 					}
 					else if 2*ttail(`df', abs(`b'/`se')) <= 0.10 {
-						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" "*"
+						loc star_`=`base'+`overall'+`reverse'+`reverseall'' "`star_`=`base'+`overall'+`reverse'+`reverseall'''" "*"
 					}
 					else {
-						loc star_`=`m'+`overall'+`reverse'+`reverseall'' "`star_`=`m'+`overall'+`reverse'+`reverseall'''" " "
+						loc star_`=`base'+`overall'+`reverse'+`reverseall'' "`star_`=`base'+`overall'+`reverse'+`reverseall'''" " "
 					}
 				}
 			}
@@ -263,6 +272,8 @@ program orth_out, rclass
 			}
 		}
 	}
+	
+	*Constructing locals to extract the table row/column names. 
 	if "`nolabel'" == "" {
 		if `"`varlabel'"' != "" {
 			loc varlist2 `varlist'
@@ -361,15 +372,11 @@ program orth_out, rclass
 	}
 	if "`colnum'" != "" {
 		loc column ""
-		loc p = `m'+`reverse'+`overall'+`reverseall'+`test'+`vcount'
+		loc p = `base'+`reverse'+`overall'+`reverseall'+`test'+`vcount'
 		forvalues n = 1/`p' {
 			loc column "`column' "(`n')""
 		}
 	}
-	if "`bdec'"=="" {
-		loc bdec = 3
-	}
-
 	if "`title'" == "" {
 		loc title "Orthogonality Table"
 	}
@@ -385,6 +392,10 @@ program orth_out, rclass
 	if `prop' {
 		loc req "`req' _"
 	}
+	if "`bdec'"=="" {
+		loc bdec = 3
+	}
+	*Exporting to excel
 	if `"`using'"' != "" {
 		clear
 		qui svmat `A'
@@ -394,9 +405,11 @@ program orth_out, rclass
 		tempvar B0
 		qui gen `B0' = ""
 		if `sterr' == 2 {
+			*Adding parentheses to standard errors
 			foreach var of varlist `A'* {
 				qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0
 			}
+			*Attaching significance level stars
 			if "`compare'" != "" & "`stars'" != "" {
 				qui su `n'
 				forvalues j = 1/`=(`ntreat'^2-`ntreat')/2' {
@@ -412,7 +425,7 @@ program orth_out, rclass
 				qui su `n'
 				forvalues p = `r(min)'/`r(max)' {
 					if mod(`p', 2) == 0 {
-						qui replace `A'`=`m'+`overall'+`reverse'' = `A'`=`m'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'''"'" ///
+						qui replace `A'`=`base'+`overall'+`reverse'' = `A'`=`base'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'''"'" ///
 							if `n' == `p' - 1
 					}
 				}
@@ -421,15 +434,16 @@ program orth_out, rclass
 				qui su `n'
 				forvalues p = `r(min)'/`r(max)' {
 					if mod(`p', 2) == 0 {
-						qui replace `A'`=`m'+`overall'+`reverse'+`reverseall'' = `A'`=`m'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`m'+`overall'+`reverse'+`reverseall'''"'" ///
+						qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'' = `A'`=`base'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'+`reverseall'''"'" ///
 							if `n' == `p' - 1
 					}
 				}
 			}
 		}
 		if `vcount' {
-			qui replace `A'`=`m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = substr(`A'`=`m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'', 1, length(`A'`=`m'+`overall'+`reverse'+`reverseall'+`test'+`vcount'')-4)
+			qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = substr(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'', 1, length(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'')-4)
 		}
+		*Attaching row/columns 
 		loc p = 2
 		foreach name in `rnames' {
 			loc ++p
@@ -479,6 +493,8 @@ program orth_out, rclass
 		}
 		order `B0', first
 		drop `n'
+		
+		*Appending 
 		if "`append'" != "" {
 			qui ds
 			if `:word count `r(varlist)'' > 26 {
@@ -498,16 +514,18 @@ program orth_out, rclass
 		export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 	}
 	if `"`column'"' == "" {
-		forvalues n = 1/`=`m'+`reverse'+`overall'+`test'' {
+		forvalues n = 1/`=`base'+`reverse'+`overall'+`test'' {
 			loc column "`column' _"
 		}
 	}
+	*Row/column displays for in-STATA display
 	mat rown   `A' = `req'
 	mat coln   `A' = `column'
 	mat roweq  `A' = `rnames'
 	mat coleq  `A' = `cnames'
 	mat li `A', noheader format(%12.`bdec'f)
-
+	
+	*Stored values
 	return loc rnames `rnames'
 	return loc cnames `cnames'
 	return loc title  `title'
