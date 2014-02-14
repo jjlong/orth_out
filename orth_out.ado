@@ -49,11 +49,12 @@ program orth_out, rclass
 	}
 	else {
 		loc backwards 0
-		if "`=substr("`:type `by''", 1, 3)'" == "str"{
+		cap conf str var `by'
+		if !_rc {
 			tempvar alt
 			qui encode `by', gen(`alt')
 			drop `by'
-			qui rename `alt' `by'
+			rename `alt' `by'
 		}
 		qui levelsof `by', local(arms)
 		loc n 0
@@ -109,15 +110,12 @@ program orth_out, rclass
 	}
 	
 	*Create binary indicators for each option that will alter the dimension of the matrix to which the results are stored.
-	loc count 		= 1 - mi("`count'")
-	loc test 		= 1 - mi("`test'")
-	loc overall		= 1 - mi("`overall'")
-	loc prop    	= 1 - mi("`proportion'")
+	foreach opt in count test overall reverse reverseall vcount {
+		loc `opt' = 1 - mi("``opt''")
+	}
+	loc prop		= 1 - mi("`proportion'")
 	loc sterr		= 2 - mi("`semean'")
 	loc interact	= 1 - mi("`interaction'")
-	loc reverse 	= 1 - mi("`reverse'")
-	loc reverseall 	= 1 - mi("`reverseall'")
-	loc vcount 		= 1 - mi("`vcount'")
 
 	tempname A
 	mat `A' = J(`sterr'*`varcount'+`count'+`prop', `base'+`reverse'+`reverseall'+`overall'+`test'+`vcount', .)
@@ -367,11 +365,11 @@ program orth_out, rclass
 		}
 	}
 	else {
-		loc rnames ""
-		loc cnames ""
+		loc rnames
+		loc cnames
 	}
 	if "`colnum'" != "" {
-		loc column ""
+		loc column
 		loc p = `base'+`reverse'+`overall'+`reverseall'+`test'+`vcount'
 		forvalues n = 1/`p' {
 			loc column "`column' "(`n')""
@@ -407,7 +405,8 @@ program orth_out, rclass
 		if `sterr' == 2 {
 			*Adding parentheses to standard errors
 			foreach var of varlist `A'* {
-				qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0
+				qui replace `var' = "(" + `var' + ")" ///
+					if `var' != "." & mod(`n', 2) == 0
 			}
 			*Attaching significance level stars
 			if "`compare'" != "" & "`stars'" != "" {
@@ -449,8 +448,7 @@ program orth_out, rclass
 			loc ++p
 			qui replace `B0' = "`name'" if `n' == `p' & "`name'" != "_"
 		}
-		qui d, s
-		loc N = `r(N)' + 1
+		loc N = _N + 1
 		qui set obs `N'
 		qui replace `n' = 1 if `n' == .
 		sort `n'
@@ -496,7 +494,7 @@ program orth_out, rclass
 		
 		*Appending 
 		if "`append'" != "" {
-			qui ds
+			qui d, varl
 			if `:word count `r(varlist)'' > 26 {
 				di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions. kthx"
 				exit 197
