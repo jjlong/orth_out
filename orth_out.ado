@@ -1,4 +1,4 @@
-*! version 2.6.3 Joe Long 13feb2014
+*! version 2.6.4 Joe Long 24feb2014
 program orth_out, rclass
 	version 12
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -454,7 +454,7 @@ program orth_out, rclass
 			}
 		}
 		if `vcount' {
-			qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = substr(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'', 1, length(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'')-4)
+			qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = string(real(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount''))
 		}
 		
 		*Attaching row/column names
@@ -498,7 +498,7 @@ program orth_out, rclass
 		foreach var of varlist `A'* {
 			if `count' {
 				loc normal = `bdec' != 0
-				qui replace `var' = substr(`var', 1, length(`var')-`bdec'-`normal') if `B0' == "N" & "`var'" != "`B0'"
+				qui replace `var' = string(real(`var')) if `B0' == "N" & "`var'" != "`B0'"
 			}
 		}
 		qui ds, has(type string)
