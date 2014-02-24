@@ -172,6 +172,8 @@ program orth_out, rclass
 			}
 		}
 		loc by `by2'
+		
+		*For reverse option
 		if `reverse' {
 			qui reg `:word 1 of `by'' `var' `covariates' `interaction', noheader
 			mat `A'[`r', `base'+`overall'+`reverse'] = _b[`var']
@@ -198,15 +200,21 @@ program orth_out, rclass
 		}
 		if `test' | `vcount' {
 			qui reg `var' `by' `covariates' `interaction', noheader
+			
+			*For adding F-test
 			if `test' {
 				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'+`test'] = Ftail(e(df_m), e(df_r), e(F))
 			}
+			
+			*For adding vertical observation count
 			if `vcount' {
 				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'] = e(N)
 			}
 		}
 		loc r = `r' + (`sterr' - 1)
 	}
+	
+	*For second reverse option
 	if `reverseall' {
 		loc r 0
 		qui reg `:word 1 of `by'' `varlist' `covariates' `interaction', noheader
@@ -236,6 +244,8 @@ program orth_out, rclass
 			}
 		}
 	}
+	
+	*For horizontal observation count
 	if `count' | `prop' {
 		tempvar N
 		gen `N' = 1
@@ -395,47 +405,50 @@ program orth_out, rclass
 	if "`bdec'"=="" {
 		loc bdec = 3
 	}
+	
 	*Exporting to excel
 	if `"`using'"' != "" {
 		clear
 		qui svmat `A'
-		tempvar n
+		tempvar _n
 		qui tostring _all, replace force format(%12.`bdec'f)
-		gen `n' = _n + 2
+		gen `_n' = _n + 2
 		tempvar B0
 		qui gen `B0' = ""
 		if `sterr' == 2 {
+		
 			*Adding parentheses to standard errors
 			foreach var of varlist `A'* {
-				qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`n', 2) == 0
+				qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`_n', 2) == 0
 			}
+			
 			*Attaching significance level stars
 			if "`compare'" != "" & "`stars'" != "" {
-				qui su `n'
+				qui su `_n'
 				forvalues j = 1/`=(`ntreat'^2-`ntreat')/2' {
 					forvalues p = `r(min)'/`r(max)' {
 						if mod(`p', 2) == 0 {
 							qui replace `A'`=`j'+`ntreat'+`overall'' = `A'`=`j'+`ntreat'+`overall'' + "`:word `=`p'/2' of "`star_`j''"'" ///
-								if `n' == `p' - 1
+								if `_n' == `p' - 1
 						}
 					}
 				}
 			}
 			if `reverse' & "`stars'" != "" {
-				qui su `n'
+				qui su `_n'
 				forvalues p = `r(min)'/`r(max)' {
 					if mod(`p', 2) == 0 {
 						qui replace `A'`=`base'+`overall'+`reverse'' = `A'`=`base'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'''"'" ///
-							if `n' == `p' - 1
+							if `_n' == `p' - 1
 					}
 				}
 			}
 			if `reverseall' & "`stars'" != "" {
-				qui su `n'
+				qui su `_n'
 				forvalues p = `r(min)'/`r(max)' {
 					if mod(`p', 2) == 0 {
 						qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'' = `A'`=`base'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'+`reverseall'''"'" ///
-							if `n' == `p' - 1
+							if `_n' == `p' - 1
 					}
 				}
 			}
@@ -443,42 +456,43 @@ program orth_out, rclass
 		if `vcount' {
 			qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = substr(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'', 1, length(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'')-4)
 		}
-		*Attaching row/columns 
+		
+		*Attaching row/column names
 		loc p = 2
 		foreach name in `rnames' {
 			loc ++p
-			qui replace `B0' = "`name'" if `n' == `p' & "`name'" != "_"
+			qui replace `B0' = "`name'" if `_n' == `p' & "`name'" != "_"
 		}
 		qui d, s
 		loc N = `r(N)' + 1
 		qui set obs `N'
-		qui replace `n' = 1 if `n' == .
-		sort `n'
+		qui replace `_n' = 1 if `_n' == .
+		sort `_n'
 
 		forvalues i = 1/`:word count `cnames'' {
-			qui replace `A'`i' = "`:word `i' of `cnames''" if `n' == 1
+			qui replace `A'`i' = "`:word `i' of `cnames''" if `_n' == 1
 		}
 		if "`colnum'" != "" {
 			loc N = `N' + 1
 			qui set obs `N'
-			qui replace `n' = 2 if `n' == .
-			sort `n'
+			qui replace `_n' = 2 if `_n' == .
+			sort `_n'
 			forvalues i = 1/`:word count `column'' {
-				qui replace `A'`i' = "`:word `i' of `column''" if `n' == 2
+				qui replace `A'`i' = "`:word `i' of `column''" if `_n' == 2
 			}
 		}
 		if "`title'" != "" {
 			loc N = `N' + 1
 			qui set obs `N'
-			qui replace `n' = 0 if `n' == .
-			sort `n'
-			qui replace `B0' = "`title'" if `n' == 0
+			qui replace `_n' = 0 if `_n' == .
+			sort `_n'
+			qui replace `B0' = "`title'" if `_n' == 0
 		}
 		if "`notes'" != "" {
 			loc N = `N' + 1
 			qui set obs `N'
-			sort `n'
-			qui replace `B0' = "`notes'" if mi(`n')
+			sort `_n'
+			qui replace `B0' = "`notes'" if mi(`_n')
 		}
 		loc note = 1 - mi("`notes'")
 		foreach var of varlist `A'* {
@@ -492,7 +506,7 @@ program orth_out, rclass
 			qui replace `var' = "" if `var' == "."
 		}
 		order `B0', first
-		drop `n'
+		drop `_n'
 		
 		*Appending 
 		if "`append'" != "" {
@@ -518,6 +532,7 @@ program orth_out, rclass
 			loc column "`column' _"
 		}
 	}
+	
 	*Row/column displays for in-STATA display
 	mat rown   `A' = `req'
 	mat coln   `A' = `column'
