@@ -115,3 +115,7 @@ orth_out var1 using `test', by(group) bdec(7) se count prop replace
 	noi mat li D
 	assert mreldif(B , D) < 1E-5
 restore
+
+
+
+Test table formatting and some more of those options. 
