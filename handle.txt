@@ -1,0 +1,11 @@
+{
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+\begin{tabular*}{\hsize}{@{\hskip\tabcolsep\extracolsep\fill}l*{2}{cc}}
+\hline\hline
+&\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}\\
+&\multicolumn{1}{c}{Domestic}&\multicolumn{1}{c}{Foreign}&\multicolumn{1}{c}{(1) vs. (2)}\\
+\hline
+Price  & 6072.423 & 6384.682 & -312.259 \\   & (429.491) & (558.994) & (754.449) \\Mileage (mpg)  & 19.827 & 24.773 & -4.946 \\   & (0.658) & (1.410) & (1.362) \\\hline
+\(N\)  & 52 & 22 & 74 \\
+\hline
+\end{tabular*}
