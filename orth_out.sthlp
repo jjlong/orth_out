@@ -37,7 +37,8 @@
 {synopt:{opt covar:iates(textgrid)}}include covariates in any regressions run (e.g. F-test, comparison, etc.) {p_end}
 {synopt:{opt interact:ion}}include interaction terms for all covariates. {p_end}
 {synopt:{opt r:everse}}run a regression with the treatment variable as the dependent variable and produces a column with the coefficients and standard errors. {p_end}
-{synopt:{opt reverseall}} same as {cmd:reverse}, but with all balance variables together instead of separately. {p_end}
+{synopt:{opt reverseall}}same as {cmd:reverse}, but with all balance variables together instead of separately. {p_end}
+{synopt:{opth vce(vcetype)}}add option for variance estimators from {cmd:regress}. {p_end}
 
 {syntab:{help orth_out##table:Table Formatting}}
 {synopt:{opt bd:ec(#)}}specify the number of significant digits. The default is 3. {p_end}
@@ -140,6 +141,10 @@ If treatment is not binary and {cmd:reverse} is specified, {cmd:orth_out} will a
 
 {phang}
 {opt reverseall} is the same as reverse, except instead of running each regression separately, all the balance variables are put into the regression together. {p_end}
+{marker vce(vcetype)}{...}
+
+{phang}
+{opt vce} lets the user specify variance estimators for regressions just like in {cmd:regress}. For more help, see {help regress} and {help vcetype}. {p_end}
 
 {marker table}
 {dlgtab:Table Formatting}
