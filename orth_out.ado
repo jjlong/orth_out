@@ -1,4 +1,4 @@
-*! version 2.6.4 Joe Long 24feb2014
+*! version 2.6.5 Joe Long 25feb2014
 program orth_out, rclass
 	version 12
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -6,7 +6,7 @@ program orth_out, rclass
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
-		[INTERACTion Reverse reverseall append stars]
+		[INTERACTion Reverse reverseall append stars vce(passthru)]
 		
 	*Make sure the help file is there
 	cap findfile orth_out.sthlp
@@ -140,7 +140,7 @@ program orth_out, rclass
 			forvalues n = 1/`ntreat' {
 				gettoken var1 by: by
 				foreach var2 of loc by {
-					qui reg `var' `var1' if (`var1'==1 | `var2'==1)
+					qui reg `var' `var1' if (`var1'==1 | `var2'==1), `vce'
 					loc ++j
 					loc b = _b[`var1']
 					loc se = _se[`var1']
@@ -175,7 +175,7 @@ program orth_out, rclass
 		
 		*For reverse option
 		if `reverse' {
-			qui reg `:word 1 of `by'' `var' `covariates' `interaction', noheader
+			qui reg `:word 1 of `by'' `var' `covariates' `interaction', noheader `vce'
 			mat `A'[`r', `base'+`overall'+`reverse'] = _b[`var']
 			if `sterr' == 2 {
 				mat `A'[`r'+1, `base'+`overall'+`reverse'] = _se[`var']
@@ -199,7 +199,7 @@ program orth_out, rclass
 			}
 		}
 		if `test' | `vcount' {
-			qui reg `var' `by' `covariates' `interaction', noheader
+			qui reg `var' `by' `covariates' `interaction', noheader `vce'
 			
 			*For adding F-test
 			if `test' {
@@ -217,7 +217,7 @@ program orth_out, rclass
 	*For second reverse option
 	if `reverseall' {
 		loc r 0
-		qui reg `:word 1 of `by'' `varlist' `covariates' `interaction', noheader
+		qui reg `:word 1 of `by'' `varlist' `covariates' `interaction', noheader `vce'
 		foreach var of local varlist {
 			loc ++r
 			mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'] = _b[`var']
@@ -527,7 +527,7 @@ program orth_out, rclass
 		}
 		export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 	}
-	if `"`column'"' == "" {
+	if `"`column'"' == "" {	
 		forvalues n = 1/`=`base'+`reverse'+`overall'+`test'' {
 			loc column "`column' _"
 		}
