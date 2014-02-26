@@ -1,12 +1,12 @@
-*! version 2.6.5 Joe Long 25feb2014
+*! version 2.7.0 Joe Long 26feb2014
 program orth_out, rclass
-	version 12
+	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
 		[SHEET(string) SHEETREPlace BDec(numlist) PCOMPare COMPare count vcount]  ///
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
-		[INTERACTion Reverse reverseall append stars vce(passthru)]
+		[INTERACTion Reverse reverseall append stars vce(passthru) latex]
 		
 	*Make sure the help file is there
 	cap findfile orth_out.sthlp
@@ -154,16 +154,16 @@ program orth_out, rclass
 							mat `A'[`r'+1,`j'] = `se'
 							if "`stars'" != "" {
 								if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
-									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "***"
+									loc star_`j' "`star_`j''" "***"
 								}
 								else if 2*ttail(`df', abs(`b'/`se')) <= 0.05 {
-									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "**"
+									loc star_`j' "`star_`j''" "**"
 								}
 								else if 2*ttail(`df', abs(`b'/`se')) <= 0.10 {
-									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" "*"
+									loc star_`j' "`star_`j''" "*"
 								}
 								else {
-									loc star_`=`j'-`ntreat'-`overall'' "`star_`=`j'-`ntreat'-`overall'''" " "
+									loc star_`j' "`star_`j''" " "
 								}
 							}
 						}
@@ -353,7 +353,12 @@ program orth_out, rclass
 		loc cnames "`cnames' `cnames2'"
 		if `reverse' {
 			if `sterr' == 2 {
-				loc standard "s. & s.e."
+				if "`latex'" != "" {
+					loc standard "s. \& s.e."
+				}
+				else {
+					loc standard "s. & s.e."
+				}
 			}
 			else {
 				loc standard "icients"
@@ -362,7 +367,12 @@ program orth_out, rclass
 		}
 		if `reverseall' {
 			if `sterr' == 2 {
-				loc standard "s. & s.e."
+				if "`latex'" != "" {
+					loc standard "s. \& s.e."
+				}
+				else {
+					loc standard "s. & s.e."
+				}
 			}
 			else {
 				loc standard "icients"
@@ -406,133 +416,183 @@ program orth_out, rclass
 		loc bdec = 3
 	}
 	
-	*Exporting to excel
+	*Exporting
 	if `"`using'"' != "" {
-		clear
-		qui svmat `A'
-		tempvar _n
-		qui tostring _all, replace force format(%12.`bdec'f)
-		gen `_n' = _n + 2
-		tempvar B0
-		qui gen `B0' = ""
-		if `sterr' == 2 {
-		
-			*Adding parentheses to standard errors
-			foreach var of varlist `A'* {
-				qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`_n', 2) == 0
-			}
+		if "`latex'" == ""{
+			*Excel exporting option
+			clear
+			qui svmat `A'
+			tempvar _n
+			qui tostring _all, replace force format(%12.`bdec'f)
+			gen `_n' = _n + 2
+			tempvar B0
+			qui gen `B0' = ""
+			if `sterr' == 2 {
 			
-			*Attaching significance level stars
-			if "`compare'" != "" & "`stars'" != "" {
-				qui su `_n'
-				forvalues j = 1/`=(`ntreat'^2-`ntreat')/2' {
+				*Adding parentheses to standard errors
+				foreach var of varlist `A'* {
+					if `prop' {
+						loc stipulation & _n != _N
+					}
+					qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`_n', 2) == 0 `stipulation'
+			
+				}
+				
+				*Attaching significance level stars
+				if "`compare'" != "" & "`stars'" != "" {
+					qui su `_n'
+					forvalues j = 1/`=(`ntreat'^2-`ntreat')/2' {
+						forvalues p = `r(min)'/`r(max)' {
+							if mod(`p', 2) == 0 {
+								qui replace `A'`=`j'+`ntreat'+`overall'' = `A'`=`j'+`ntreat'+`overall'' + "`:word `=`p'/2' of "`star_`=`j'+`ntreat'+`overall'''"'" ///
+									if `_n' == `p' - 1
+							}
+						}
+					}
+				}
+				if `reverse' & "`stars'" != "" {
+					qui su `_n'
 					forvalues p = `r(min)'/`r(max)' {
 						if mod(`p', 2) == 0 {
-							qui replace `A'`=`j'+`ntreat'+`overall'' = `A'`=`j'+`ntreat'+`overall'' + "`:word `=`p'/2' of "`star_`j''"'" ///
+							qui replace `A'`=`base'+`overall'+`reverse'' = `A'`=`base'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'''"'" ///
+								if `_n' == `p' - 1
+						}
+					}
+				}
+				if `reverseall' & "`stars'" != "" {
+					qui su `_n'
+					forvalues p = `r(min)'/`r(max)' {
+						if mod(`p', 2) == 0 {
+							qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'' = `A'`=`base'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'+`reverseall'''"'" ///
 								if `_n' == `p' - 1
 						}
 					}
 				}
 			}
-			if `reverse' & "`stars'" != "" {
-				qui su `_n'
-				forvalues p = `r(min)'/`r(max)' {
-					if mod(`p', 2) == 0 {
-						qui replace `A'`=`base'+`overall'+`reverse'' = `A'`=`base'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'''"'" ///
-							if `_n' == `p' - 1
-					}
-				}
+			if `vcount' {
+				qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = string(real(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount''))
 			}
-			if `reverseall' & "`stars'" != "" {
-				qui su `_n'
-				forvalues p = `r(min)'/`r(max)' {
-					if mod(`p', 2) == 0 {
-						qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'' = `A'`=`base'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'+`reverseall'''"'" ///
-							if `_n' == `p' - 1
-					}
-				}
+			
+			*Attaching row/column names
+			loc p = 2
+			foreach name in `rnames' {
+				loc ++p
+				qui replace `B0' = "`name'" if `_n' == `p' & "`name'" != "_"
 			}
-		}
-		if `vcount' {
-			qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = string(real(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount''))
-		}
-		
-		*Attaching row/column names
-		loc p = 2
-		foreach name in `rnames' {
-			loc ++p
-			qui replace `B0' = "`name'" if `_n' == `p' & "`name'" != "_"
-		}
-		qui d, s
-		loc N = `r(N)' + 1
-		qui set obs `N'
-		qui replace `_n' = 1 if `_n' == .
-		sort `_n'
+			qui d, s
+			loc N = `r(N)' + 1
+			qui set obs `N'
+			qui replace `_n' = 1 if `_n' == .
+			sort `_n'
 
-		forvalues i = 1/`:word count `cnames'' {
-			qui replace `A'`i' = "`:word `i' of `cnames''" if `_n' == 1
-		}
-		if "`colnum'" != "" {
-			loc N = `N' + 1
-			qui set obs `N'
-			qui replace `_n' = 2 if `_n' == .
-			sort `_n'
-			forvalues i = 1/`:word count `column'' {
-				qui replace `A'`i' = "`:word `i' of `column''" if `_n' == 2
+			forvalues i = 1/`:word count `cnames'' {
+				qui replace `A'`i' = "`:word `i' of `cnames''" if `_n' == 1
 			}
-		}
-		if "`title'" != "" {
-			loc N = `N' + 1
-			qui set obs `N'
-			qui replace `_n' = 0 if `_n' == .
-			sort `_n'
-			qui replace `B0' = "`title'" if `_n' == 0
-		}
-		if "`notes'" != "" {
-			loc N = `N' + 1
-			qui set obs `N'
-			sort `_n'
-			qui replace `B0' = "`notes'" if mi(`_n')
-		}
-		loc note = 1 - mi("`notes'")
-		foreach var of varlist `A'* {
-			if `count' {
-				loc normal = `bdec' != 0
-				qui replace `var' = string(real(`var')) if `B0' == "N" & "`var'" != "`B0'"
+			if "`colnum'" != "" {
+				loc N = `N' + 1
+				qui set obs `N'
+				qui replace `_n' = 2 if `_n' == .
+				sort `_n'
+				forvalues i = 1/`:word count `column'' {
+					qui replace `A'`i' = "`:word `i' of `column''" if `_n' == 2
+				}
 			}
-		}
-		qui ds, has(type string)
-		foreach var of varlist `r(varlist)' {
-			qui replace `var' = "" if `var' == "."
-		}
-		order `B0', first
-		drop `_n'
-		
-		*Appending 
-		if "`append'" != "" {
-			qui ds
-			if `:word count `r(varlist)'' > 26 {
-				di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions. kthx"
-				exit 197
+			if "`title'" != "" {
+				loc N = `N' + 1
+				qui set obs `N'
+				qui replace `_n' = 0 if `_n' == .
+				sort `_n'
+				qui replace `B0' = "`title'" if `_n' == 0
 			}
-			forvalues q = 1/`:word count `r(varlist)'' {
-				rename `:word `q' of `r(varlist)'' `:word `q' of `c(ALPHA)''
+			if "`notes'" != "" {
+				loc N = `N' + 1
+				qui set obs `N'
+				sort `_n'
+				qui replace `B0' = "`notes'" if mi(`_n')
 			}
-			tempfile temp
-			qui save `temp'
-			import excel `using', clear
-			append using `temp'
-			di "table appended to `:word 2 of `using''"
-			loc replace replace
+			loc note = 1 - mi("`notes'")
+			foreach var of varlist `A'* {
+				if `count' {
+					loc normal = `bdec' != 0
+					qui replace `var' = string(real(`var')) if `B0' == "N" & "`var'" != "`B0'"
+				}
+			}
+			qui ds, has(type string)
+			foreach var of varlist `r(varlist)' {
+				qui replace `var' = "" if `var' == "."
+			}
+			order `B0', first
+			drop `_n'
+			
+			*Appending 
+			if "`append'" != "" {
+				qui ds
+				if `:word count `r(varlist)'' > 26 {
+					di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions. kthx"
+					exit 197
+				}
+				forvalues q = 1/`:word count `r(varlist)'' {
+					rename `:word `q' of `r(varlist)'' `:word `q' of `c(ALPHA)''
+				}
+				tempfile temp
+				qui save `temp'
+				import excel `using', clear
+				append using `temp'
+				di "table appended to `:word 2 of `using''"
+				loc replace replace
+			}
+			export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 		}
-		export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
+		else {
+			*Latex export option
+			cap file close handle
+			file open handle `using', write replace
+			file w handle "{" _n
+			file w handle "\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}" _n
+			file w handle "\begin{tabular*}{\hsize}{@{\hskip\tabcolsep\extracolsep\fill}l*{`=colsof(`A')'}{cc}}" _n
+			file w handle "\hline\hline" _n
+			forvalues m = 1/`=colsof(`A')' {
+				file w handle "&\multicolumn{1}{c}{(`m')}"
+			}
+			file w handle "\\" _n
+			forvalues m = 1/`=colsof(`A')' {
+				file w handle "&\multicolumn{1}{c}{`=substr("`:word `m' of `cnames''", 1, 11)'}"
+			}
+			file w handle "\\" _n "\hline" _n
+
+			forvalues n = 1/`=rowsof(`A')' {
+				loc row`n' ""
+				forvalues m = 1/`=colsof(`A')' {
+					if "`=string(`A'[`n', `m'], "%9.`bdec'f")'" != "." {
+						if "`:word `n' of `rnames''" != " "{
+							if "`:word `n' of `rnames''" != "N" {
+								loc row`n' "`row`n'' & `=string(`A'[`n', `m'], "%9.`bdec'f")'`:word `=`n'' of `star_`=`m''''"
+							}
+							else {
+								loc row`n' "`row`n'' & `=string(`A'[`n', `m'], "%9.0f")'"
+							}
+						}
+						else {
+							loc row`n' "`row`n'' & (`=string(`A'[`n', `m'], "%9.`bdec'f")')" 
+						}
+					}
+				}
+				if "`:word `n' of `rnames''" != "N" {
+					file write handle "`:word `n' of `rnames'' `row`n'' \\" 
+				}
+				else {
+					file write handle "\hline" _n "\(N\) `row`n'' \\" 
+				}
+			}
+			file w handle _n "\hline" _n "\end{tabular*}"
+			file close handle
+		}
 	}
 	if `"`column'"' == "" {	
 		forvalues n = 1/`=`base'+`reverse'+`overall'+`test'' {
 			loc column "`column' _"
 		}
 	}
-	
 	*Row/column displays for in-STATA display
 	mat rown   `A' = `req'
 	mat coln   `A' = `column'
