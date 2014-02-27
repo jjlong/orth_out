@@ -545,9 +545,11 @@ program orth_out, rclass
 				tempvar _n
 				gen `_n' = _n
 				tempfile temp
-				save `temp', replace
+				qui save `temp', replace
 				import excel `using', clear
-				merge 1:1 `_n' using `temp', nogen
+				gen `_n' = _n
+				qui merge 1:1 `_n' using `temp', nogen
+				drop `_n'
 				di "table appended to `:word 2 of `using''"
 				loc replace replace
 			}
