@@ -1,4 +1,4 @@
-*! version 2.7.0 Joe Long 26feb2014
+*! version 2.8.0 Joe Long 27feb2014
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -6,7 +6,7 @@ program orth_out, rclass
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
-		[INTERACTion Reverse reverseall append stars vce(passthru) latex]
+		[INTERACTion Reverse reverseall VAPPend HAPPend stars vce(passthru) latex]
 		
 	*Make sure the help file is there
 	cap findfile orth_out.sthlp
@@ -525,7 +525,7 @@ program orth_out, rclass
 			drop `_n'
 			
 			*Appending 
-			if "`append'" != "" {
+			if "`vappend'" != "" {
 				qui ds
 				if `:word count `r(varlist)'' > 26 {
 					di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions. kthx"
@@ -538,6 +538,16 @@ program orth_out, rclass
 				qui save `temp'
 				import excel `using', clear
 				append using `temp'
+				di "table appended to `:word 2 of `using''"
+				loc replace replace
+			}
+			if "`happend'" != "" {
+				tempvar _n
+				gen `_n' = _n
+				tempfile temp
+				save `temp', replace
+				import excel `using', clear
+				merge 1:1 `_n' using `temp', nogen
 				di "table appended to `:word 2 of `using''"
 				loc replace replace
 			}
@@ -584,7 +594,10 @@ program orth_out, rclass
 					file write handle "\hline" _n "\(N\) `row`n'' \\" 
 				}
 			}
-			file w handle _n "\hline" _n "\end{tabular*}"
+			if "`notes'" == "" {
+				loc notes Standard errors in parentheses. \sym{*} \(p<0.10\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)
+			}
+			file w handle _n "\hline" _n "\multicolumn{`=colsof(`A')+1'}{l}{\footnotesize `notes' }\\" _n "\end{tabular*}"
 			file close handle
 		}
 	}
