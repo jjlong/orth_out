@@ -14,7 +14,7 @@ gen group = .
 forvalues n = 1/3{
 	replace group = `n' if _n > `=`n'-1'/4*_N
 }
-qui gen var1 = 10*runiform()
+qui gen var1 = 1000000*runiform()
 qui gen var2 = runiform()
 la var var1 "Variable 1"
 la de group 1 "A" 2 "B" 3 "C" 
@@ -116,6 +116,22 @@ orth_out var1 using `test', by(group) bdec(7) se count prop replace
 	assert mreldif(B , D) < 1E-5
 restore
 
+*For latex checking. Fix so that it makes sense. 
+tempfile blah
+tempname blah2
+file open `blah2' using `blah', write 
+file w `blah2' "hello 1 2 3 " _n "goodbye 4 bla3l"
+file close `blah2'
+file open `blah2' using `blah', read text
+file read `blah2' line
+while r(eof) == 0 {
+	while regexm("`line'", "[^0-9]") {
+		local line = regexr("`line'", "[^0-9]", "")
+	}
+	di "`line'"
+	file read `blah2' line
+}
 
+/*
 
 Test table formatting and some more of those options. 

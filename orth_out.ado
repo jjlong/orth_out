@@ -383,7 +383,12 @@ program orth_out, rclass
 			loc cnames "`cnames' "p-value from joint orthogonality test of treatment arms""
 		}
 		if `vcount' {
-			loc cnames "`cnames' "N from orthogonality test""
+			if `test' {
+				loc cnames "`cnames' "N from orthogonality test""
+			}
+			else {
+				loc cnames "`cnames' "N""
+			}
 		}
 	}
 	else {
@@ -397,7 +402,7 @@ program orth_out, rclass
 			loc column "`column' "(`n')""
 		}
 	}
-	if "`title'" == "" {
+	if `"`title'"' == `""' {
 		loc title "Orthogonality Table"
 	}
 	forvalues n = 1/`varcount' {
@@ -497,12 +502,12 @@ program orth_out, rclass
 					qui replace `A'`i' = "`:word `i' of `column''" if `_n' == 2
 				}
 			}
-			if "`title'" != "" {
+			if `"`title'"' != `""' {
 				loc N = `N' + 1
 				qui set obs `N'
 				qui replace `_n' = 0 if `_n' == .
 				sort `_n'
-				qui replace `B0' = "`title'" if `_n' == 0
+				qui replace `B0' = `""`title'""' if `_n' == 0
 			}
 			if "`notes'" != "" {
 				loc N = `N' + 1
@@ -559,16 +564,29 @@ program orth_out, rclass
 			*Latex export option
 			cap file close handle
 			file open handle `using', write replace
+			file w handle `"\centering\caption {"`title'"}"' _n
 			file w handle "{" _n
 			file w handle "\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}" _n
-			file w handle "\begin{tabular*}{\hsize}{@{\hskip\tabcolsep\extracolsep\fill}l*{`=colsof(`A')'}{cc}}" _n
+			file w handle "\begin{tabular}{p{2.5cm}*{`=colsof(`A')'}{c}}" _n
 			file w handle "\hline\hline" _n
 			forvalues m = 1/`=colsof(`A')' {
 				file w handle "&\multicolumn{1}{c}{(`m')}"
 			}
 			file w handle "\\" _n
+			loc extra = 0
 			forvalues m = 1/`=colsof(`A')' {
-				file w handle "&\multicolumn{1}{c}{`=substr("`:word `m' of `cnames''", 1, 11)'}"
+				if length("`:word `m' of `cnames''") > 11 {
+					loc ++extra
+					file w handle "&\multicolumn{1}{p{2.75cm}}{\centering `:word `m' of `cnames''}"
+				}
+				else {
+					if "`:word `m' of `cnames''" != "N" {
+						file w handle "&\multicolumn{1}{c}{`:word `m' of `cnames''}"
+					}
+					else {
+						file w handle "&\multicolumn{1}{c}{\(N\)}"
+					}
+				}
 			}
 			file w handle "\\" _n "\hline" _n
 
@@ -577,7 +595,7 @@ program orth_out, rclass
 				forvalues m = 1/`=colsof(`A')' {
 					if "`=string(`A'[`n', `m'], "%9.`bdec'f")'" != "." {
 						if "`:word `n' of `rnames''" != " "{
-							if "`:word `n' of `rnames''" != "N" {
+							if "`:word `n' of `rnames''" != "N" & "`:word `m' of `cnames''" != "N"{
 								loc row`n' "`row`n'' & `=string(`A'[`n', `m'], "%9.`bdec'f")'`:word `=`n'' of `star_`=`m''''"
 							}
 							else {
@@ -597,9 +615,15 @@ program orth_out, rclass
 				}
 			}
 			if "`notes'" == "" {
-				loc notes Standard errors in parentheses. \sym{*} \(p<0.10\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)
+				if `sterr' == 2{
+					loc stparen Standard errors in parentheses.
+				}
+				if "`stars'" != ""{
+					loc starkey \sym{*} \(p<0.10\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)
+				}
+				loc notes `stparen' `starkey'
 			}
-			file w handle _n "\hline" _n "\multicolumn{`=colsof(`A')+1'}{l}{\footnotesize `notes' }\\" _n "\end{tabular*}"
+			file w handle _n "\hline" _n "\multicolumn{`=colsof(`A')+1'}{p{`=2*(1+colsof(`A'))+`extra'*0.75+0.5'cm}}{\footnotesize `notes' }\\" _n "\end{tabular}"
 			file close handle
 		}
 	}
