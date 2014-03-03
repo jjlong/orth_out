@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.6.2 09jan2014}{...}
+{* *! version 2.8.1 3mar2014}{...}
 {cmd:help orth_out}
 {hline}
 
@@ -21,7 +21,9 @@
 {synoptline}
 {syntab:{help orth_out##output:Output}}
 {synopt:{opt replace}}overwrite existing file{p_end}
-{synopt:{opt append}}append previously exported table at the top of the existing file{p_end}
+{synopt:{opt vappend}}append previously exported table at the top of the existing file{p_end}
+{synopt:{opt happend}}append previously exported table to the right of the existing file{p_end}
+{synopt:{opt latex}}output with a latex table. {p_end}
 {synopt:{opt sheet(textgrid)}}name the sheet in the workbook{p_end}
 {p2col 10 34 40 8:{cmdab:sheetrep:lace}}replace the sheet specified in {cmd:sheet()}.{p_end}
 
@@ -72,11 +74,20 @@ The order of columns is immutable: it will always be means:overall:compare:rever
 
 {phang}
 {opt replace} permits overwriting the existing file. {p_end}
-{marker append}{...}
+{marker vappend}{...}
 
 {phang}
-{opt append} appends the table generated to the one specified in using.
+{opt vappend} vertically appends the table generated to the one specified in using.
 The master table will not appear in the output window, only in the excel sheet. {p_end}
+{marker happend}{...}
+
+{phang}
+{opt happend} horizontally appends the table generated to the one specified in using.
+The master table will not appear in the output window, only in the excel sheet. {p_end}
+{marker latex}{...}
+
+{phang}
+{opt latex} exports a latex table in lieu of an excel one. {p_end}
 {marker sheet}{...}
 
 {phang}
@@ -182,7 +193,8 @@ If not specified, the default is that the rows are labeled with the variable lab
 {marker title}{...}
 
 {phang}
-{opt title(textgrid)} specifies a title or titles above the regression table.{p_end}
+{opt title(textgrid)} specifies a title or titles above the regression table. 
+Note that if your title contains double quotes, you must enclose your title with compound double quotes. {p_end}
 {marker note}{...}
 
 {phang}

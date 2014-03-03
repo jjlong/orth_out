@@ -1,4 +1,4 @@
-*! version 2.8.0 Joe Long 27feb2014
+*! version 2.8.1 Joe Long 03mar2014
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -23,6 +23,10 @@ program orth_out, rclass
 		di as err "Cannot specify compare and pcompare together"
 		exit 198
 	}
+	if `"`using'"' == `""' & "`latex'" != "" {
+		di as err "Must specify output file"
+		exit 198
+	}
 	
 	*Generate single treatment variable with levels for each treatment arm
 	loc ntreat: word count `by'
@@ -35,7 +39,6 @@ program orth_out, rclass
 				cap destring `var', replace
 				if _rc != 0 {
 					di as err "Cannot process non-numeric binary strings."
-					di as err "(srsly?)"
 					exit 109
 				}
 			}
@@ -507,7 +510,7 @@ program orth_out, rclass
 				qui set obs `N'
 				qui replace `_n' = 0 if `_n' == .
 				sort `_n'
-				qui replace `B0' = `""`title'""' if `_n' == 0
+				qui replace `B0' = `"`title'"' if `_n' == 0
 			}
 			if "`notes'" != "" {
 				loc N = `N' + 1
