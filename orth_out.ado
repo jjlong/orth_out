@@ -1,4 +1,4 @@
-*! version 2.8.1 Joe Long 03mar2014
+*! version 2.8.2 Joe Long 03mar2014
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -8,13 +8,6 @@ program orth_out, rclass
 		[PROPortion SEmean COVARiates(varlist)] ///
 		[INTERACTion Reverse reverseall VAPPend HAPPend stars vce(passthru) latex]
 		
-	*Make sure the help file is there
-	cap findfile orth_out.sthlp
-	if _rc != 0 {
-		di as smcl `"Please download the {browse "https://ipastorage.box.com/s/ljz0kaqbv2815rgzvbxf":help file} associated with orth_out.ado"'
-		exit 601
-	}
-	
 	preserve
 	if `"`if'"' != "" {
 		qui keep `if'
