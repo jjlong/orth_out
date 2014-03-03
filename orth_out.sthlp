@@ -21,8 +21,8 @@
 {synoptline}
 {syntab:{help orth_out##output:Output}}
 {synopt:{opt replace}}overwrite existing file{p_end}
-{synopt:{opt vappend}}append previously exported table at the top of the existing file{p_end}
-{synopt:{opt happend}}append previously exported table to the right of the existing file{p_end}
+{synopt:{opt vappend}}append table under the table in {cmd:using}{p_end}
+{synopt:{opt happend}}append table to the right of the table in {cmd:using}{{p_end}
 {synopt:{opt latex}}output with a latex table. {p_end}
 {synopt:{opt sheet(textgrid)}}name the sheet in the workbook{p_end}
 {p2col 10 34 40 8:{cmdab:sheetrep:lace}}replace the sheet specified in {cmd:sheet()}.{p_end}
