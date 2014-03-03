@@ -200,6 +200,44 @@ Note that if your title contains double quotes, you must enclose your title with
 {phang}
 {opt notes(textgrid)} specifies a note to be displayed below the {cmd:orth_out} table. Multiple lines of a note should be separated by commas. {p_end}
 
+{title:Examples}
+      {synoptline}
+	Setup
+	{com}. sysuse auto
+	{txt}(1978 Automobile Data)
+
+	Summary statistics
+	{com}. orth_out price mpg, by(foreign) se
+
+{txt}		                     Domestic:   Foreign:
+{txt}		                            _          _
+{txt}		        Price:mean   6072.423   6384.682
+{txt}                		se    429.491    558.994
+{txt}		Mileage (mpg):mean     19.827     24.773
+{txt}		                se      0.658      1.410
+
+	Export table to Excel
+	{com}. orth_out price mpg using test, by(foreign) se
+	{txt}file test.xls saved	
+{txt}		                     Domestic:   Foreign:
+{txt}		                            _          _
+{txt}		        Price:mean   6072.423   6384.682
+{txt}                		se    429.491    558.994
+{txt}		Mileage (mpg):mean     19.827     24.773
+{txt}		                se      0.658      1.410
+
+	Orthogonality table testing if price and mpg are balanced between domestic and foreign cars (hint: they aren't)
+	{com}. orth_out price mpg, by(foreign) se
+
+        	{txt}			Domestic:      Foreign:  (1) vs. (2):  p-value f~y:   
+        	{txt}			       _             _             _             _  
+        	{txt}	Price:mean      6072.423      6384.682      -312.259         0.680
+        	{txt}           se       429.491       558.994       754.449             .
+   	{txt}   Mileage (mpg):mean        19.827        24.773        -4.946         0.001
+       		{txt}           se         0.658         1.410         1.362             .  
+		{txt} 	       N:_        52.000        22.000        74.000             .
+
+      {synoptline}
 {title:Saved Results}
 
 {phang}
