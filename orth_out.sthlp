@@ -227,7 +227,7 @@ Note that if your title contains double quotes, you must enclose your title with
 {txt}		                se      0.658      1.410
 
 	Orthogonality table testing if price and mpg are balanced between domestic and foreign cars (hint: they aren't)
-	{com}. orth_out price mpg, by(foreign) se
+	{com}. orth_out price mpg, by(foreign) se compare test count 
 
         	{txt}			Domestic:      Foreign:  (1) vs. (2):  p-value f~y:   
         	{txt}			       _             _             _             _  
