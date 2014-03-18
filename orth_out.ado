@@ -1,4 +1,4 @@
-*! version 2.8.2 Joe Long 03mar2014
+*! version 2.8.4 Joe Long 17mar2014
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -307,10 +307,10 @@ program orth_out, rclass
 		if `prop' {
 			loc rnames "`rnames' "Proportion""
 		}
-		if "`armlabel'"!="" {
+		if `"`armlabel'"'!=`""' {
 			loc ccount: word count `armlabel'
 			if `ccount' == `ntreat' {
-				loc cnames `armlabel'
+				loc cnames `"`armlabel'"'
 			}
 		}
 		else if "`numlabel'" != "" {
@@ -560,7 +560,7 @@ program orth_out, rclass
 			*Latex export option
 			cap file close handle
 			file open handle `using', write replace
-			file w handle `"\centering\caption {"`title'"}"' _n
+			file w handle `"\centering\caption {`title'}"' _n
 			file w handle "{" _n
 			file w handle "\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}" _n
 			file w handle "\begin{tabular}{p{2.5cm}*{`=colsof(`A')'}{c}}" _n
@@ -591,7 +591,7 @@ program orth_out, rclass
 				forvalues m = 1/`=colsof(`A')' {
 					if "`=string(`A'[`n', `m'], "%9.`bdec'f")'" != "." {
 						if "`:word `n' of `rnames''" != " "{
-							if "`:word `n' of `rnames''" != "N" & "`:word `m' of `cnames''" != "N"{
+							if "`:word `n' of `rnames''" != "N" & !inlist("`:word `m' of `cnames''", "N", "N from orthogonality test"){
 								loc row`n' "`row`n'' & `=string(`A'[`n', `m'], "%9.`bdec'f")'`:word `=`n'' of `star_`=`m''''"
 							}
 							else {
