@@ -670,7 +670,7 @@ program orth_out, rclass
 			order `B0', first
 			drop `_n'
 			
-			*Appending 
+			* Appending 
 			if "`vappend'" != "" {
 				qui ds
 				if `:word count `r(varlist)'' > 26 {
@@ -692,7 +692,7 @@ program orth_out, rclass
 				gen `_n' = _n
 				tempfile temp
 				qui save `temp', replace
-				import excel `using', clear
+				u `using', clear
 				qui ds
 				loc varlist `r(varlist)'
 				loc allalpha "`c(ALPHA)'"
@@ -708,9 +708,18 @@ program orth_out, rclass
 				di "table appended to `:word 2 of `using''"
 				loc replace replace
 			}
+			else {
+				loc firstalpha "`c(ALPHA)'"
+				loc y 0
+				foreach var of varlist _* {
+					loc y = `y' + 1
+					ren `var' `:word `y' of `firstalpha''
+				}
+			}
 			loc dtafilename = subinstr(`"`using'"', "using ", "", 1)
 			if "`replace'" == "replace" ///
 				loc replacecondition 1
+			else loc replacecondition 0
 			save `dtafilename' `=cond(`replacecondition', ",", "")' `replace'
 		}		
 		
