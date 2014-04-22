@@ -426,7 +426,7 @@ program orth_out, rclass
 	
 	*Exporting
 	if `"`using'"' != "" {
-		if "`latex'"  == "" & "`dta'" == "" {
+		if "`latex'"  == "" {
 			*Excel exporting option
 			clear
 			qui svmat `A'
@@ -549,179 +549,59 @@ program orth_out, rclass
 				di "table appended to `:word 2 of `using''"
 				loc replace replace
 			}
-			if "`happend'" != "" {
-				tempvar _n
-				gen `_n' = _n
-				tempfile temp
-				qui save `temp', replace
-				import excel `using', clear
-				gen `_n' = _n
-				qui merge 1:1 `_n' using `temp', nogen
-				drop `_n'
-				di "table appended to `:word 2 of `using''"
-				loc replace replace
+			if "`dta'" == "" {
+				if "`happend'" != "" {
+					tempvar _n
+					gen `_n' = _n
+					tempfile temp
+					qui save `temp', replace
+					import excel `using', clear
+					gen `_n' = _n
+					qui merge 1:1 `_n' using `temp', nogen
+					drop `_n'
+					di "table appended to `:word 2 of `using''"
+					loc replace replace
+				}
 			}
+			* dta option starts here
+			else if "`dta'" != "" {
+				if "`happend'" != "" {
+					tempvar _n
+					gen `_n' = _n
+					tempfile temp
+					qui save `temp', replace
+					u `using', clear
+					qui ds
+					loc varlist `r(varlist)'
+					loc allalpha "`c(ALPHA)'"
+					loc remalpha: list allalpha - varlist
+					gen `_n' = _n
+					qui merge 1:1 `_n' using `temp', nogen
+					drop `_n'
+					loc x 0
+					foreach var of varlist _* {
+						loc x = `x' + 1
+						qui ren `var' `:word `x' of `remalpha''
+					}
+					di "table appended to `:word 2 of `using''"
+					loc replace replace
+				}
+				else {
+					loc firstalpha "`c(ALPHA)'"
+					loc y 0
+					foreach var of varlist _* {
+						loc y = `y' + 1
+						ren `var' `:word `y' of `firstalpha''
+					}
+				}
+				loc dtafilename = subinstr(`"`using'"', "using ", "", 1)
+				if "`replace'" == "replace" ///
+					loc replacecondition 1
+				else loc replacecondition 0
+				save `dtafilename' `=cond(`replacecondition', ",", "")' `replace'
+			}		
 			export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 		}
-		* dta option starts here
-		if "`dta'" != "" & "`latex'" == "" {
-			*Excel exporting option
-			clear
-			qui svmat `A'
-			tempvar _n
-			qui tostring _all, replace force format(%12.`bdec'f)
-			gen `_n' = _n + 2
-			tempvar B0
-			qui gen `B0' = ""
-			if `sterr' == 2 {
-			
-				*Adding parentheses to standard errors
-				foreach var of varlist `A'* {
-					if `prop' {
-						loc stipulation & _n != _N
-					}
-					qui replace `var' = "(" + `var' + ")" if `var' != "." & mod(`_n', 2) == 0 `stipulation'
-			
-				}
-				
-				*Attaching significance level stars
-				if "`compare'" != "" & "`stars'" != "" {
-					qui su `_n'
-					forvalues j = 1/`=(`ntreat'^2-`ntreat')/2' {
-						forvalues p = `r(min)'/`r(max)' {
-							if mod(`p', 2) == 0 {
-								qui replace `A'`=`j'+`ntreat'+`overall'' = `A'`=`j'+`ntreat'+`overall'' + "`:word `=`p'/2' of "`star_`=`j'+`ntreat'+`overall'''"'" ///
-									if `_n' == `p' - 1
-							}
-						}
-					}
-				}
-				if `reverse' & "`stars'" != "" {
-					qui su `_n'
-					forvalues p = `r(min)'/`r(max)' {
-						if mod(`p', 2) == 0 {
-							qui replace `A'`=`base'+`overall'+`reverse'' = `A'`=`base'+`overall'+`reverse'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'''"'" ///
-								if `_n' == `p' - 1
-						}
-					}
-				}
-				if `reverseall' & "`stars'" != "" {
-					qui su `_n'
-					forvalues p = `r(min)'/`r(max)' {
-						if mod(`p', 2) == 0 {
-							qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'' = `A'`=`base'+`overall'+`reverse'+`reverseall'' + "`:word `=`p'/2' of "`star_`=`base'+`overall'+`reverse'+`reverseall'''"'" ///
-								if `_n' == `p' - 1
-						}
-					}
-				}
-			}
-			if `vcount' {
-				qui replace `A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount'' = string(real(`A'`=`base'+`overall'+`reverse'+`reverseall'+`test'+`vcount''))
-			}
-			
-			*Attaching row/column names
-			loc p = 2
-			foreach name in `rnames' {
-				loc ++p
-				qui replace `B0' = "`name'" if `_n' == `p' & "`name'" != "_"
-			}
-			qui d, s
-			loc N = `r(N)' + 1
-			qui set obs `N'
-			qui replace `_n' = 1 if `_n' == .
-			sort `_n'
-
-			forvalues i = 1/`:word count `cnames'' {
-				qui replace `A'`i' = "`:word `i' of `cnames''" if `_n' == 1
-			}
-			if "`colnum'" != "" {
-				loc N = `N' + 1
-				qui set obs `N'
-				qui replace `_n' = 2 if `_n' == .
-				sort `_n'
-				forvalues i = 1/`:word count `column'' {
-					qui replace `A'`i' = "`:word `i' of `column''" if `_n' == 2
-				}
-			}
-			if `"`title'"' != `""' {
-				loc N = `N' + 1
-				qui set obs `N'
-				qui replace `_n' = 0 if `_n' == .
-				sort `_n'
-				qui replace `B0' = `"`title'"' if `_n' == 0
-			}
-			if "`notes'" != "" {
-				loc N = `N' + 1
-				qui set obs `N'
-				sort `_n'
-				qui replace `B0' = "`notes'" if mi(`_n')
-			}
-			loc note = 1 - mi("`notes'")
-			foreach var of varlist `A'* {
-				if `count' {
-					loc normal = `bdec' != 0
-					qui replace `var' = string(real(`var')) if `B0' == "N" & "`var'" != "`B0'"
-				}
-			}
-			qui ds, has(type string)
-			foreach var of varlist `r(varlist)' {
-				qui replace `var' = "" if `var' == "."
-			}
-			order `B0', first
-			drop `_n'
-			
-			* Appending 
-			if "`vappend'" != "" {
-				qui ds
-				if `:word count `r(varlist)'' > 26 {
-					di as err "yo gurrrl u has 2 many treatments. pls re-evaluate yo lyfe decisions. kthx"
-					exit 197
-				}
-				forvalues q = 1/`:word count `r(varlist)'' {
-					rename `:word `q' of `r(varlist)'' `:word `q' of `c(ALPHA)''
-				}
-				tempfile temp
-				qui save `temp'
-				import excel `using', clear
-				append using `temp'
-				di "table appended to `:word 2 of `using''"
-				loc replace replace
-			}
-			if "`happend'" != "" {
-				tempvar _n
-				gen `_n' = _n
-				tempfile temp
-				qui save `temp', replace
-				u `using', clear
-				qui ds
-				loc varlist `r(varlist)'
-				loc allalpha "`c(ALPHA)'"
-				loc remalpha: list allalpha - varlist
-				gen `_n' = _n
-				qui merge 1:1 `_n' using `temp', nogen
-				drop `_n'
-				loc x 0
-				foreach var of varlist _* {
-					loc x = `x' + 1
-					qui ren `var' `:word `x' of `remalpha''
-				}
-				di "table appended to `:word 2 of `using''"
-				loc replace replace
-			}
-			else {
-				loc firstalpha "`c(ALPHA)'"
-				loc y 0
-				foreach var of varlist _* {
-					loc y = `y' + 1
-					ren `var' `:word `y' of `firstalpha''
-				}
-			}
-			loc dtafilename = subinstr(`"`using'"', "using ", "", 1)
-			if "`replace'" == "replace" ///
-				loc replacecondition 1
-			else loc replacecondition 0
-			save `dtafilename' `=cond(`replacecondition', ",", "")' `replace'
-		}		
 		
 		if "`latex'" != "" & "`dta'" == "" {
 			*Latex export option
