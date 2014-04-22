@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.8.1 3mar2014}{...}
+{* *! version 2.9.0 22apr2014}{...}
 {cmd:help orth_out}
 {hline}
 
@@ -24,6 +24,7 @@
 {synopt:{opt vappend}}append table under the table in {cmd:using}{p_end}
 {synopt:{opt happend}}append table to the right of the table in {cmd:using}{{p_end}
 {synopt:{opt latex}}output with a latex table. {p_end}
+{p2col 10 34 40 8:{cmdab:full}}output with full table. {p_end}
 {synopt:{opt dta}}output with a dta table. {p_end}
 {synopt:{opt sheet(textgrid)}}name the sheet in the workbook{p_end}
 {p2col 10 34 40 8:{cmdab:sheetrep:lace}}replace the sheet specified in {cmd:sheet()}.{p_end}
@@ -88,7 +89,9 @@ The master table will not appear in the output window, only in the excel sheet. 
 {marker latex}{...}
 
 {phang}
-{opt latex} exports a latex table in lieu of an excel one. {p_end}
+{opt latex} exports a latex table in lieu of an excel one. 
+{cmd:full} needs to be specified in order for the table to be directly inputted to Tex via \input{} and the like. 
+Otherwise it will just give the statistics and row/column names without any table formatting, which depending on your objective may be better. {p_end}
 {marker sheet}{...}
 
 {phang}
@@ -265,5 +268,5 @@ jlong@poverty-action.org
 {title:Acknowledgments}
 
 {phang}
-Much thanks to Ellen Degnan for inspiration and Mateo Blanco for general wisdom. {p_end}
+Much thanks to Ellen Degnan for inspiration, Hideto Koizumi for contributions, and Matthew White for programming support. {p_end}
 
