@@ -116,6 +116,134 @@ orth_out var1 using `test', by(group) bdec(7) se count prop replace
 	assert mreldif(B , D) < 1E-5
 restore
 
+
+********************************************************************************
+******************************CHECK FOR DTA OPTION******************************
+********************************************************************************
+
+*Compare exported matrix to calculated one
+tempfile test
+*HORIZONTAL
+preserve
+orth_out var1 using `test', by(group) bdec(7) se compare overall r test vcount dta
+	use `test', clear
+	
+	drop A
+	drop in 1/2
+	foreach var of varlist _all{
+		qui replace `var' = subinstr(`var', "(", "",.)
+		qui replace `var' = subinstr(`var', ")", "",.)
+		*replace `var' = subinstr(`var', "*", "",.)
+	}
+	qui destring _all, replace
+
+	mkmat _all, mat(C)
+	noi mat li C
+	assert mreldif(A , C) < 1E-5
+restore
+
+*VERTICAL
+preserve
+orth_out var1 using `test', by(group) bdec(7) se count prop replace dta
+	use `test', clear
+
+	drop A
+	drop in 1/2
+	foreach var of varlist _all{
+		qui replace `var' = subinstr(`var', "(", "",.)
+		qui replace `var' = subinstr(`var', ")", "",.)
+		*replace `var' = subinstr(`var', "*", "",.)
+	}
+	qui destring _all, replace
+	mkmat _all, mat(D)
+	noi mat li D
+	assert mreldif(B , D) < 1E-5
+restore
+
+**Happend test
+**The first output
+**Vertical
+preserve
+tempfile test
+orth_out var1 using `test', by(group) bdec(7) se count prop replace dta
+orth_out var1 using `test', by(group) bdec(7) se count prop replace dta happend 
+	use `test', clear
+
+	keep B-D
+	drop in 1/2
+	foreach var of varlist _all{
+		qui replace `var' = subinstr(`var', "(", "",.)
+		qui replace `var' = subinstr(`var', ")", "",.)
+		*replace `var' = subinstr(`var', "*", "",.)
+	}
+	qui destring _all, replace
+	mkmat _all, mat(D)
+	noi mat li D
+	assert mreldif(B , D) < 1E-5
+restore	
+
+**Horizontal
+preserve
+tempfile test
+orth_out var1 using `test', by(group) bdec(7) se compare overall r test vcount dta
+orth_out var1 using `test', by(group) bdec(7) se compare overall r test vcount dta happend 
+	use `test', clear
+
+	keep B-K
+	drop in 1/2
+	foreach var of varlist _all{
+		qui replace `var' = subinstr(`var', "(", "",.)
+		qui replace `var' = subinstr(`var', ")", "",.)
+		*replace `var' = subinstr(`var', "*", "",.)
+	}
+	qui destring _all, replace
+
+	mkmat _all, mat(C)
+	noi mat li C
+	assert mreldif(A , C) < 1E-5
+restore	
+
+**The second output
+**Vertical
+preserve
+tempfile test
+orth_out var1 using `test', by(group) bdec(7) se count prop replace dta
+orth_out var1 using `test', by(group) bdec(7) se count prop replace dta happend 
+	use `test', clear
+
+	keep F-H
+	drop in 1/2
+	foreach var of varlist _all{
+		qui replace `var' = subinstr(`var', "(", "",.)
+		qui replace `var' = subinstr(`var', ")", "",.)
+		*replace `var' = subinstr(`var', "*", "",.)
+	}
+	qui destring _all, replace
+	mkmat _all, mat(D)
+	noi mat li D
+	assert mreldif(B , D) < 1E-5
+restore	
+
+**Horizontal
+preserve
+tempfile test
+orth_out var1 using `test', by(group) bdec(7) se compare overall r test vcount dta
+orth_out var1 using `test', by(group) bdec(7) se compare overall r test vcount dta happend 
+	use `test', clear
+	keep M-V
+	drop in 1/2
+	foreach var of varlist _all{
+		qui replace `var' = subinstr(`var', "(", "",.)
+		qui replace `var' = subinstr(`var', ")", "",.)
+		*replace `var' = subinstr(`var', "*", "",.)
+	}
+	qui destring _all, replace
+
+	mkmat _all, mat(C)
+	noi mat li C
+	assert mreldif(A , C) < 1E-5
+restore	
+
 *For latex checking. Fix so that it makes sense. 
 tempfile blah
 tempname blah2

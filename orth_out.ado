@@ -1,4 +1,4 @@
-*! version 2.8.4 Joe Long 17mar2014
+*! version 2.8.4 Joe Long 17mar2014--Hideto added dta and assignment of alphabet names to happend option
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -6,7 +6,7 @@ program orth_out, rclass
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
-		[INTERACTion Reverse reverseall VAPPend HAPPend stars vce(passthru) latex]
+		[INTERACTion Reverse reverseall VAPPend HAPPend stars vce(passthru) latex dta]
 		
 	preserve
 	if `"`if'"' != "" {
@@ -20,8 +20,15 @@ program orth_out, rclass
 		di as err "Must specify output file"
 		exit 198
 	}
-	
-	*Generate single treatment variable with levels for each treatment arm
+	if "`latex'" != "" & "`dta'" != "" {
+		di as err "You cannot specify both latex and dta option simultaneously"
+		exit 198
+	}
+	if `"`using'"' == `""' & "`dta'" != "" {
+		di as err "Must specify output file"
+		exit 198
+	}	
+	* Generate single treatment variable with levels for each treatment arm
 	loc ntreat: word count `by'
 	if `ntreat' > 1 {
 		tempvar marker
@@ -419,7 +426,7 @@ program orth_out, rclass
 	
 	*Exporting
 	if `"`using'"' != "" {
-		if "`latex'" == ""{
+		if "`latex'"  == "" {
 			*Excel exporting option
 			clear
 			qui svmat `A'
@@ -542,21 +549,61 @@ program orth_out, rclass
 				di "table appended to `:word 2 of `using''"
 				loc replace replace
 			}
-			if "`happend'" != "" {
-				tempvar _n
-				gen `_n' = _n
-				tempfile temp
-				qui save `temp', replace
-				import excel `using', clear
-				gen `_n' = _n
-				qui merge 1:1 `_n' using `temp', nogen
-				drop `_n'
-				di "table appended to `:word 2 of `using''"
-				loc replace replace
+			if "`dta'" == "" {
+				if "`happend'" != "" {
+					tempvar _n
+					gen `_n' = _n
+					tempfile temp
+					qui save `temp', replace
+					import excel `using', clear
+					gen `_n' = _n
+					qui merge 1:1 `_n' using `temp', nogen
+					drop `_n'
+					di "table appended to `:word 2 of `using''"
+					loc replace replace
+				}
 			}
+			* dta option starts here
+			else if "`dta'" != "" {
+				if "`happend'" != "" {
+					tempvar _n
+					gen `_n' = _n
+					tempfile temp
+					qui save `temp', replace
+					u `using', clear
+					qui ds
+					loc varlist `r(varlist)'
+					loc allalpha "`c(ALPHA)'"
+					loc remalpha: list allalpha - varlist
+					gen `_n' = _n
+					qui merge 1:1 `_n' using `temp', nogen
+					drop `_n'
+					loc x 0
+					foreach var of varlist _* {
+						loc x = `x' + 1
+						qui ren `var' `:word `x' of `remalpha''
+					}
+					di "table appended to `:word 2 of `using''"
+					loc replace replace
+				}
+				else {
+					loc firstalpha "`c(ALPHA)'"
+					loc y 0
+					foreach var of varlist _* {
+						loc y = `y' + 1
+						ren `var' `:word `y' of `firstalpha''
+					}
+				}
+				loc dtafilename = subinstr(`"`using'"', "using ", "", 1)
+				if "`replace'" == "replace" ///
+					loc replacecondition 1
+				else loc replacecondition 0
+				save `dtafilename' `=cond(`replacecondition', ",", "")' `replace'
+			}		
 			export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 		}
-		else {
+		
+		if "`latex'" != "" & "`dta'" == "" {
 			*Latex export option
 			cap file close handle
 			file open handle `using', write replace

@@ -24,6 +24,7 @@
 {synopt:{opt vappend}}append table under the table in {cmd:using}{p_end}
 {synopt:{opt happend}}append table to the right of the table in {cmd:using}{{p_end}
 {synopt:{opt latex}}output with a latex table. {p_end}
+{synopt:{opt dta}}output with a dta table. {p_end}
 {synopt:{opt sheet(textgrid)}}name the sheet in the workbook{p_end}
 {p2col 10 34 40 8:{cmdab:sheetrep:lace}}replace the sheet specified in {cmd:sheet()}.{p_end}
 
