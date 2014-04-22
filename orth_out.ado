@@ -1,4 +1,4 @@
-*! version 2.8.4 Joe Long 17mar2014--Hideto added dta and assignment of alphabet names to happend option
+*! version 2.9.0 Joe Long 22apr2014
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -6,7 +6,7 @@ program orth_out, rclass
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
-		[INTERACTion Reverse reverseall VAPPend HAPPend stars vce(passthru) latex dta]
+		[INTERACTion Reverse reverseall VAPPend HAPPend stars vce(passthru) latex full dta]
 		
 	preserve
 	if `"`if'"' != "" {
@@ -607,11 +607,13 @@ program orth_out, rclass
 			*Latex export option
 			cap file close handle
 			file open handle `using', write replace
-			file w handle `"\centering\caption {`title'}"' _n
-			file w handle "{" _n
-			file w handle "\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}" _n
-			file w handle "\begin{tabular}{p{2.5cm}*{`=colsof(`A')'}{c}}" _n
-			file w handle "\hline\hline" _n
+			if "`full'" != "" {
+				file w handle `"\centering\caption {`title'}"' _n
+				file w handle "{" _n
+				file w handle "\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}" _n
+				file w handle "\begin{tabular}{p{2.5cm}*{`=colsof(`A')'}{c}}" _n
+				file w handle "\hline\hline" _n
+			}
 			forvalues m = 1/`=colsof(`A')' {
 				file w handle "&\multicolumn{1}{c}{(`m')}"
 			}
@@ -619,16 +621,16 @@ program orth_out, rclass
 			loc extra = 0
 			forvalues m = 1/`=colsof(`A')' {
 				if length("`:word `m' of `cnames''") > 11 {
-					loc ++extra
-					file w handle "&\multicolumn{1}{p{2.75cm}}{\centering `:word `m' of `cnames''}"
+					if "`full" != "" {
+						loc ++extra
+						file w handle "&\multicolumn{1}{p{2.75cm}}{\centering `:word `m' of `cnames''}"
+					}
+				}
+				else if "`:word `m' of `cnames''" != "N" {
+					file w handle "&\multicolumn{1}{c}{`:word `m' of `cnames''}"
 				}
 				else {
-					if "`:word `m' of `cnames''" != "N" {
-						file w handle "&\multicolumn{1}{c}{`:word `m' of `cnames''}"
-					}
-					else {
-						file w handle "&\multicolumn{1}{c}{\(N\)}"
-					}
+					file w handle "&\multicolumn{1}{c}{\(N\)}"
 				}
 			}
 			file w handle "\\" _n "\hline" _n
@@ -657,16 +659,18 @@ program orth_out, rclass
 					file write handle "\hline" _n "\(N\) `row`n'' \\" 
 				}
 			}
-			if "`notes'" == "" {
-				if `sterr' == 2{
-					loc stparen Standard errors in parentheses.
+			if "`full'" != "" {
+				if "`notes'" == "" {
+					if `sterr' == 2{
+						loc stparen Standard errors in parentheses.
+					}
+					if "`stars'" != ""{
+						loc starkey \sym{*} \(p<0.10\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)
+					}
+					loc notes `stparen' `starkey'
 				}
-				if "`stars'" != ""{
-					loc starkey \sym{*} \(p<0.10\), \sym{**} \(p<0.05\), \sym{***} \(p<0.01\)
-				}
-				loc notes `stparen' `starkey'
+				file w handle _n "\hline" _n "\multicolumn{`=colsof(`A')+1'}{p{`=2*(1+colsof(`A'))+`extra'*0.75+0.5'cm}}{\footnotesize `notes' }\\" _n "\end{tabular}"
 			}
-			file w handle _n "\hline" _n "\multicolumn{`=colsof(`A')+1'}{p{`=2*(1+colsof(`A'))+`extra'*0.75+0.5'cm}}{\footnotesize `notes' }\\" _n "\end{tabular}"
 			file close handle
 		}
 	}
