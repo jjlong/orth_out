@@ -562,6 +562,7 @@ program orth_out, rclass
 					di "table appended to `:word 2 of `using''"
 					loc replace replace
 				}
+				export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 			}
 			* dta option starts here
 			else if "`dta'" != "" {
@@ -600,7 +601,6 @@ program orth_out, rclass
 				else loc replacecondition 0
 				save `dtafilename' `=cond(`replacecondition', ",", "")' `replace'
 			}		
-			export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 		}
 		
 		if "`latex'" != "" & "`dta'" == "" {

@@ -125,7 +125,7 @@ restore
 tempfile test
 *HORIZONTAL
 preserve
-orth_out var1 using `test', by(group) bdec(7) se compare overall r test vcount dta
+orth_out var1 using `test', by(group) bdec(7) se compare overall r test vcount dta replace
 	use `test', clear
 	
 	drop A
