@@ -1,8 +1,8 @@
-*! version 2.9.0 Joe Long 22apr2014
+*! version 2.9.1 Joe Long 10jun2014
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
-		[SHEET(string) SHEETREPlace BDec(numlist) PCOMPare COMPare count vcount]  ///
+		[SHEET(string) SHEETREPlace SHEETMODify BDec(numlist) PCOMPare COMPare count vcount]  ///
 		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
 		[COLNUM Title(string) NOTEs(string) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
@@ -544,7 +544,7 @@ program orth_out, rclass
 				}
 				tempfile temp
 				qui save `temp'
-				import excel `using', clear
+				import excel `using', clear sheet("`sheet'")
 				append using `temp'
 				di "table appended to `:word 2 of `using''"
 				loc replace replace
@@ -555,12 +555,12 @@ program orth_out, rclass
 					gen `_n' = _n
 					tempfile temp
 					qui save `temp', replace
-					import excel `using', clear
+					import excel `using', clear sheet("`sheet'")
 					gen `_n' = _n
 					qui merge 1:1 `_n' using `temp', nogen
 					drop `_n'
 					di "table appended to `:word 2 of `using''"
-					loc replace replace
+					*loc replace replace
 				}
 				export excel _all `using', `replace' sheet("`sheet'") `sheetmodify' `sheetreplace'
 			}
@@ -609,7 +609,6 @@ program orth_out, rclass
 			file open handle `using', write replace
 			if "`full'" != "" {
 				file w handle `"\centering\caption {`title'}"' _n
-				file w handle "{" _n
 				file w handle "\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}" _n
 				file w handle "\begin{tabular}{p{2.5cm}*{`=colsof(`A')'}{c}}" _n
 				file w handle "\hline\hline" _n
