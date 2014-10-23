@@ -3,8 +3,8 @@ program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
 		[SHEET(string) SHEETREPlace SHEETMODify BDec(numlist) PCOMPare COMPare count vcount]  ///
-		[NOLAbel ARMLAbel(string) VARLAbel(string asis) NUMLAbel] ///
-		[COLNUM Title(string) NOTEs(string) test overall] ///
+		[NOLAbel ARMLAbel(string asis) VARLAbel(string asis) NUMLAbel] ///
+		[COLNUM Title(string asis) NOTEs(string asis) test overall] ///
 		[PROPortion SEmean COVARiates(varlist)] ///
 		[INTERACTion Reverse reverseall VAPPend HAPPend stars vce(passthru) latex full dta]
 		
@@ -129,13 +129,34 @@ program orth_out, rclass
 		loc ++r
 		
 		*Basic mean/se
-		qui tabstat `var' , by(`treatment_type') stats(mean `semean') save
-		forvalues n = 1/`ntreat' {
-			mat `A'[`r',`n'] = r(Stat`n')
+		if 0 {
+			qui tabstat `var' , by(`treatment_type') stats(mean `semean') save
+			forvalues n = 1/`ntreat' {
+				mat `A'[`r',`n'] = r(Stat`n')
+			}
+			if `overall' {
+				mat `A'[`r', `ntreat'+1] = r(StatTotal)
+			}
 		}
-		if `overall' {
-			mat `A'[`r', `ntreat'+1] = r(StatTotal)
+		if 1 {
+			loc n = 0
+			foreach var1 of loc by {
+				loc ++n
+				qui reg `var' if `var1' == 1, `vce'
+				mat `A'[`r', `n'] = _b[_cons]
+				if "`semean'" != "" {
+					mat `A'[`r'+1, `n'] = _se[_cons]
+				}
+			}
+			if `overall' {
+				qui reg `var', `vce'
+				mat `A'[`r', `ntreat'+1] = _b[_cons]
+				if "`semean'" != "" {
+					mat `A'[`r'+1, `ntreat'+1] = _se[_cons]
+				}
+			}
 		}
+		
 		loc j = `ntreat' + `overall'
 		
 		*Adding mean/se for treatment arm comparisons
@@ -512,11 +533,11 @@ program orth_out, rclass
 				sort `_n'
 				qui replace `B0' = `"`title'"' if `_n' == 0
 			}
-			if "`notes'" != "" {
+			if `"`notes'"' != `""' {
 				loc N = `N' + 1
 				qui set obs `N'
 				sort `_n'
-				qui replace `B0' = "`notes'" if mi(`_n')
+				qui replace `B0' = `"`notes'"' if mi(`_n')
 			}
 			loc note = 1 - mi("`notes'")
 			foreach var of varlist `A'* {
