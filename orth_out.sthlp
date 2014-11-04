@@ -159,7 +159,7 @@ If treatment is not binary and {cmd:reverse} is specified, {cmd:orth_out} will a
 {marker vce(vcetype)}{...}
 
 {phang}
-{opt vce} lets the user specify variance estimators for regressions just like in {cmd:regress}. For more help, see {help regress} and {help vcetype}. {p_end}
+{opt vce} lets the user specify variance estimators for standard errors just like in {cmd:regress}. For more help, see {help regress} and {help vcetype}. {p_end}
 
 {marker table}
 {dlgtab:Table Formatting}

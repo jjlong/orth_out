@@ -1,4 +1,4 @@
-*! version 2.9.3 Joe Long 23oct2014
+*! version 2.9.4 Joe Long 04nov2014
 program orth_out, rclass
 	version 12.0
 	syntax varlist [using] [if], BY(varlist) [replace] ///
@@ -164,11 +164,11 @@ program orth_out, rclass
 			forvalues n = 1/`ntreat' {
 				gettoken var1 by: by
 				foreach var2 of loc by {
-					qui reg `var' `var1' if (`var1'==1 | `var2'==1), `vce'
+					qui reg `var' `var1' `covariates' `interaction' if (`var1'==1 | `var2'==1), `vce'
 					loc ++j
 					loc b = _b[`var1']
 					loc se = _se[`var1']
-					loc df = e(N) - 1
+					loc df = e(df_r)
 					if "`pcompare'" != "" {
 						mat `A'[`r',`j'] = 2*ttail(`df', abs(`b'/`se'))
 					}
@@ -205,7 +205,7 @@ program orth_out, rclass
 				mat `A'[`r'+1, `base'+`overall'+`reverse'] = _se[`var']
 				loc b _b[`var']
 				loc se _se[`var']
-				loc df = e(N) - 1
+				loc df = e(df_r)
 				if "`stars'" != "" {
 					if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
 						loc star_`=`base'+`overall'+`reverse'' "`star_`=`base'+`overall'+`reverse'''" "***"
@@ -227,7 +227,8 @@ program orth_out, rclass
 			
 			*For adding F-test
 			if `test' {
-				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'+`test'] = Ftail(e(df_m), e(df_r), e(F))
+				qui test `by'
+				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'+`test'] = r(p)				
 			}
 			
 			*For adding vertical observation count
@@ -250,7 +251,7 @@ program orth_out, rclass
 				mat `A'[`r', `base'+`overall'+`reverse'+`reverseall'] = _se[`var']
 				loc b _b[`var']
 				loc se _se[`var']
-				loc df = e(N) - 1
+				loc df = e(df_r)
 				if "`stars'" != "" {
 					if 2*ttail(`df', abs(`b'/`se')) <= 0.01 {
 						loc star_`=`base'+`overall'+`reverse'+`reverseall'' "`star_`=`base'+`overall'+`reverse'+`reverseall'''" "***"
